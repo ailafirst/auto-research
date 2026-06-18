@@ -1,0 +1,15 @@
+# Deep Research Agent 仅需 Python 环境运行，无需 Docker。
+# 本文件保留用于后续部署场景。
+version: "3.9"
+
+services:
+  # API 服务 (后续部署用)
+  # deep-research-api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped

@@ -1,0 +1,1241 @@
+下面是一份可直接作为立项/开发用的 **Deep Research Agent 项目需求文档 PRD**。我按“学习项目 + 可扩展工程项目”的标准来写，技术栈包含 **LangGraph、RAG、FastAPI、向量数据库、LLM、多轮检索与事实核查**。
+
+# Deep Research Agent 项目需求文档
+
+## 1. 项目名称
+
+Deep Research Agent：基于 LangGraph、RAG 与 FastAPI 的自动化深度调研系统
+
+---
+
+## 2. 项目背景
+
+在日常学习、科研、产品分析、行业研究和竞品调研场景中，用户通常需要花费大量时间完成资料搜索、信息筛选、内容阅读、事实核查和报告撰写。传统搜索引擎只能返回网页链接，普通大模型虽然可以生成总结，但存在信息来源不透明、时效性不足、事实幻觉、缺乏可追溯引用等问题。
+
+本项目希望构建一个 Deep Research Agent 系统，使用户只需输入一个研究问题，系统即可自动完成：
+
+1. 研究问题拆解；
+2. 多轮联网检索；
+3. 网页内容抓取与清洗；
+4. 信源质量评估；
+5. 文档切片与向量化入库；
+6. 基于 RAG 的证据检索；
+7. 多轮分析与事实核查；
+8. 生成结构化研究报告；
+9. 通过 API 或 Web 页面对外提供服务。
+
+该项目既可作为 AI Agent 工程化学习项目，也可作为后续扩展为知识调研平台、企业内部研究助手或自动化分析工具的基础。
+
+---
+
+## 3. 项目目标
+
+### 3.1 核心目标
+
+构建一个能够自动完成深度研究任务的智能 Agent 系统，支持用户输入自然语言问题，系统输出带有引用来源、结构清晰、逻辑完整的研究报告。
+
+### 3.2 学习目标
+
+通过本项目掌握以下技术能力：
+
+1. 使用 LangGraph 构建多节点、多状态、多轮循环的 Agent 工作流；
+2. 使用 RAG 构建基于证据的问答和报告生成流程；
+3. 使用向量数据库存储和检索网页内容；
+4. 使用 FastAPI 对 Agent 能力进行服务化封装；
+5. 使用异步任务、日志、状态跟踪和错误处理提升工程完整度；
+6. 掌握 Deep Research 类系统中的规划、检索、分析、核查和报告生成链路。
+
+### 3.3 产品目标
+
+系统应支持以下能力：
+
+1. 用户输入一个研究主题或复杂问题；
+2. 系统自动拆解为多个子问题；
+3. 系统自动调用搜索工具获取网页资料；
+4. 系统对网页内容进行清洗、筛选、切片和向量化；
+5. 系统基于检索证据生成阶段性分析；
+6. 系统对分析结果进行事实核查；
+7. 若证据不足，系统自动进行补充检索；
+8. 系统最终生成结构化研究报告；
+9. 用户可以通过 REST API 或简单 Web UI 使用系统。
+
+---
+
+## 4. 用户角色
+
+### 4.1 普通用户
+
+普通用户通过 Web 页面或 API 输入研究问题，查看系统生成的调研报告。
+
+典型需求：
+
+1. 输入问题；
+2. 查看研究进度；
+3. 获取最终报告；
+4. 查看引用来源；
+5. 下载或复制报告。
+
+### 4.2 开发者用户
+
+开发者用户关注系统的内部流程、日志、状态和扩展能力。
+
+典型需求：
+
+1. 查看 Agent 执行链路；
+2. 调试 LangGraph 节点；
+3. 更换 LLM 模型；
+4. 调整检索轮数和 RAG 参数；
+5. 扩展搜索工具、数据库或报告模板。
+
+### 4.3 管理员用户，后续扩展
+
+管理员用户用于管理系统配置、任务记录、用户权限和运行监控。
+
+初期可不实现完整管理员后台，但应预留扩展接口。
+
+---
+
+## 5. 核心使用场景
+
+### 5.1 行业研究
+
+用户输入：
+
+> 2026 年 AI Agent 行业的发展趋势有哪些？
+
+系统输出：
+
+1. 行业背景；
+2. 主要趋势；
+3. 代表公司和产品；
+4. 技术路线；
+5. 风险和挑战；
+6. 未来展望；
+7. 引用来源。
+
+### 5.2 竞品分析
+
+用户输入：
+
+> 对比 Perplexity、ChatGPT Deep Research 和 Gemini Deep Research 的功能差异。
+
+系统输出：
+
+1. 产品概览；
+2. 功能对比表；
+3. 技术能力分析；
+4. 适用场景；
+5. 优劣势分析；
+6. 总结建议。
+
+### 5.3 学术主题调研
+
+用户输入：
+
+> RAG 系统中 reranker 的作用是什么？有哪些常见实现方法？
+
+系统输出：
+
+1. 概念解释；
+2. 技术原理；
+3. 常见架构；
+4. 代表模型；
+5. 实际工程价值；
+6. 参考来源。
+
+### 5.4 技术选型分析
+
+用户输入：
+
+> 如果我要做企业知识库问答系统，应该选择 Milvus、Qdrant 还是 Elasticsearch？
+
+系统输出：
+
+1. 需求拆解；
+2. 技术对比；
+3. 成本分析；
+4. 性能分析；
+5. 部署复杂度；
+6. 推荐方案。
+
+---
+
+## 6. 功能需求
+
+## 6.1 用户输入模块
+
+### 功能描述
+
+用户可以提交一个自然语言研究问题，并配置部分可选参数。
+
+### 输入字段
+
+| 字段                | 类型      | 必填 | 说明                             |
+| ----------------- | ------- | -- | ------------------------------ |
+| query             | string  | 是  | 用户输入的研究问题                      |
+| max_rounds        | integer | 否  | 最大研究轮数，默认 2                    |
+| language          | string  | 否  | 输出语言，默认 zh-CN                  |
+| report_type       | string  | 否  | 报告类型，如 summary、deep、comparison |
+| search_depth      | string  | 否  | 搜索深度，如 basic、advanced          |
+| top_k             | integer | 否  | RAG 检索片段数量                     |
+| enable_fact_check | boolean | 否  | 是否启用事实核查                       |
+
+### 验收标准
+
+1. 用户可以提交非空研究问题；
+2. 系统能够校验输入长度；
+3. 系统能够返回任务 ID；
+4. 系统能够根据参数调整研究流程。
+
+---
+
+## 6.2 研究规划模块 Planner
+
+### 功能描述
+
+Planner 负责将用户问题拆解为可执行的研究计划。
+
+### 主要能力
+
+1. 识别用户研究意图；
+2. 判断问题类型，例如解释类、对比类、趋势类、方案类；
+3. 拆解 3 到 6 个子问题；
+4. 为每个子问题生成搜索关键词；
+5. 生成研究计划结构。
+
+### 输出结构示例
+
+```json
+{
+  "research_goal": "分析 AI Agent 行业发展趋势",
+  "question_type": "trend_analysis",
+  "sub_questions": [
+    {
+      "id": "q1",
+      "question": "AI Agent 当前的主要技术路线是什么？",
+      "search_queries": [
+        "AI Agent architecture trend 2026",
+        "LLM agent framework comparison"
+      ]
+    }
+  ]
+}
+```
+
+### 技术实现
+
+使用 LangGraph 节点 `planner_node` 调用 LLM 生成结构化 JSON 计划。
+
+### 验收标准
+
+1. 能够生成结构化研究计划；
+2. 子问题与原始问题相关；
+3. 搜索关键词可用于联网检索；
+4. 对比类问题应保留所有对比对象。
+
+---
+
+## 6.3 信息检索模块 Retriever
+
+### 功能描述
+
+Retriever 根据研究计划自动调用搜索工具，获取相关网页链接和基础摘要。
+
+### 主要能力
+
+1. 根据子问题执行搜索；
+2. 支持多关键词检索；
+3. 支持搜索结果去重；
+4. 支持限制每个问题的搜索数量；
+5. 支持失败重试；
+6. 支持记录检索来源。
+
+### 可选搜索工具
+
+1. Tavily Search API；
+2. Serper API；
+3. Bing Search API；
+4. 自定义搜索接口。
+
+### 输出字段
+
+| 字段              | 说明     |
+| --------------- | ------ |
+| title           | 页面标题   |
+| url             | 页面 URL |
+| snippet         | 搜索摘要   |
+| source          | 搜索来源   |
+| sub_question_id | 关联子问题  |
+| retrieved_at    | 检索时间   |
+
+### 验收标准
+
+1. 每个子问题至少获取若干候选来源；
+2. URL 不应大量重复；
+3. 搜索失败时不会导致整个任务崩溃；
+4. 检索结果应写入任务状态。
+
+---
+
+## 6.4 网页抓取与内容清洗模块
+
+### 功能描述
+
+系统根据搜索结果抓取网页正文，并对网页内容进行清洗。
+
+### 主要能力
+
+1. 抓取网页正文；
+2. 移除导航栏、广告、版权区、无效文本；
+3. 过滤内容过短或质量较低的页面；
+4. 保留标题、URL、发布时间、作者等元数据；
+5. 支持抓取失败重试；
+6. 支持超时控制。
+
+### 可选实现方式
+
+1. Jina Reader；
+2. trafilatura；
+3. newspaper3k；
+4. BeautifulSoup + readability；
+5. Playwright，作为复杂动态页面的后续扩展。
+
+### 验收标准
+
+1. 能够从常见网页中提取正文；
+2. 正文长度低于阈值的页面会被过滤；
+3. 保留 URL、标题等来源信息；
+4. 抓取失败有日志记录。
+
+---
+
+## 6.5 信源评估模块 Source Evaluator
+
+### 功能描述
+
+Source Evaluator 对搜索结果和网页正文进行质量评估，筛选可用于分析的资料。
+
+### 评估维度
+
+1. 内容相关性；
+2. 正文长度；
+3. 域名可信度；
+4. 页面是否过时；
+5. 是否来自低质量聚合站；
+6. 是否与用户问题直接相关；
+7. 是否包含可验证信息。
+
+### 评分结构示例
+
+```json
+{
+  "url": "https://example.com/article",
+  "relevance_score": 0.82,
+  "credibility_score": 0.75,
+  "freshness_score": 0.68,
+  "final_score": 0.76,
+  "accepted": true,
+  "reason": "内容与研究问题高度相关，来源质量较好"
+}
+```
+
+### 验收标准
+
+1. 系统可以过滤明显无关网页；
+2. 系统可以保留高质量信源；
+3. 每个被保留来源应有评分或筛选理由；
+4. 信源评估结果应进入后续 RAG 流程。
+
+---
+
+## 6.6 RAG 知识构建模块 Evidence Builder
+
+### 功能描述
+
+Evidence Builder 负责将网页正文转换为可检索证据，包括切片、向量化和入库。
+
+### 主要能力
+
+1. 文档切片；
+2. 文本清洗；
+3. Embedding 生成；
+4. 向量写入数据库；
+5. 元数据绑定；
+6. 按任务 ID 隔离数据；
+7. 支持后续证据检索。
+
+### 推荐技术栈
+
+| 能力    | 技术                                    |
+| ----- | ------------------------------------- |
+| 文本切片  | 自定义 chunker 或 LangChain text splitter |
+| 向量模型  | fastembed、bge、OpenAI embedding        |
+| 向量数据库 | Qdrant                                |
+| 元数据管理 | PostgreSQL 或 SQLite                   |
+| 检索接口  | qdrant-client                         |
+
+### Chunk 元数据
+
+```json
+{
+  "task_id": "task_001",
+  "source_id": "source_001",
+  "url": "https://example.com",
+  "title": "Example Article",
+  "chunk_index": 3,
+  "text": "chunk text...",
+  "created_at": "2026-06-17T10:00:00Z"
+}
+```
+
+### 验收标准
+
+1. 网页正文可以被成功切片；
+2. 每个 chunk 可以生成 embedding；
+3. chunk 可以写入 Qdrant；
+4. 检索时可以按 task_id 过滤；
+5. 检索结果能返回原始 URL 和标题。
+
+---
+
+## 6.7 分析模块 Analyst
+
+### 功能描述
+
+Analyst 基于 RAG 检索到的证据片段，对每个子问题生成分析内容。
+
+### 主要能力
+
+1. 按子问题检索相关证据；
+2. 基于证据生成回答；
+3. 保留引用来源编号；
+4. 避免无证据推断；
+5. 标记证据不足的问题。
+
+### 输出示例
+
+```json
+{
+  "sub_question_id": "q1",
+  "answer": "AI Agent 当前主要技术路线包括工作流型 Agent、多工具调用 Agent 和多智能体协作系统...",
+  "citations": ["S1", "S3", "S7"],
+  "confidence": 0.78,
+  "evidence_gap": false
+}
+```
+
+### 验收标准
+
+1. 每个子问题都有对应分析结果；
+2. 分析内容应引用证据；
+3. 分析不得明显脱离检索材料；
+4. 证据不足时应显式标记。
+
+---
+
+## 6.8 事实核查模块 Fact Checker
+
+### 功能描述
+
+Fact Checker 对 Analyst 生成的分析内容进行核查，判断是否存在事实错误、证据不足或逻辑跳跃。
+
+### 主要能力
+
+1. 检查关键结论是否有证据支持；
+2. 检查引用是否对应原文；
+3. 检查不同来源之间是否存在冲突；
+4. 检查是否出现过度推断；
+5. 生成补充检索建议；
+6. 决定是否进入下一轮检索。
+
+### 输出示例
+
+```json
+{
+  "passed": false,
+  "issues": [
+    {
+      "type": "insufficient_evidence",
+      "claim": "某技术将在 2026 年成为主流",
+      "reason": "当前证据只显示该技术正在增长，但不足以证明将成为主流"
+    }
+  ],
+  "follow_up_queries": [
+    "2026 AI Agent adoption statistics",
+    "enterprise AI agent market report 2026"
+  ]
+}
+```
+
+### 验收标准
+
+1. 能够发现明显证据不足的问题；
+2. 能够生成补充检索关键词；
+3. 当核查失败且未超过最大轮数时，系统会自动进入下一轮检索；
+4. 达到最大轮数后，系统应输出带有限制说明的报告。
+
+---
+
+## 6.9 报告生成模块 Report Writer
+
+### 功能描述
+
+Report Writer 将研究计划、分析结果、证据来源和事实核查结果整合为最终报告。
+
+### 报告结构
+
+最终报告应包括：
+
+1. 标题；
+2. 摘要；
+3. 研究问题说明；
+4. 核心结论；
+5. 分章节分析；
+6. 对比表或趋势表，视问题类型而定；
+7. 风险与不确定性；
+8. 证据不足说明；
+9. 参考来源列表。
+
+### 报告格式
+
+支持以下格式：
+
+1. Markdown；
+2. JSON；
+3. 后续可扩展为 PDF、DOCX。
+
+### 验收标准
+
+1. 报告结构清晰；
+2. 结论有引用来源；
+3. 不确定信息有明确说明；
+4. 对比类问题应包含表格；
+5. Markdown 格式可直接复制使用。
+
+---
+
+## 6.10 任务管理模块
+
+### 功能描述
+
+系统应支持异步任务管理，用户提交研究问题后，可以查询任务状态和结果。
+
+### 任务状态
+
+| 状态            | 说明           |
+| ------------- | ------------ |
+| pending       | 等待执行         |
+| planning      | 正在生成研究计划     |
+| retrieving    | 正在检索资料       |
+| indexing      | 正在构建 RAG 证据库 |
+| analyzing     | 正在分析         |
+| fact_checking | 正在事实核查       |
+| writing       | 正在生成报告       |
+| completed     | 已完成          |
+| failed        | 执行失败         |
+
+### 验收标准
+
+1. 用户提交任务后立即获得 task_id；
+2. 用户可以查询任务状态；
+3. 任务失败时返回错误信息；
+4. 任务完成后可以获取最终报告。
+
+---
+
+## 6.11 API 服务模块
+
+### 功能描述
+
+使用 FastAPI 对外提供 Deep Research 服务接口。
+
+### API 设计
+
+#### 1. 创建研究任务
+
+```http
+POST /api/research
+```
+
+请求体：
+
+```json
+{
+  "query": "对比 LangGraph 和 CrewAI 的区别",
+  "max_rounds": 2,
+  "language": "zh-CN",
+  "report_type": "comparison"
+}
+```
+
+响应体：
+
+```json
+{
+  "task_id": "task_001",
+  "status": "pending"
+}
+```
+
+#### 2. 查询任务状态
+
+```http
+GET /api/research/{task_id}/status
+```
+
+响应体：
+
+```json
+{
+  "task_id": "task_001",
+  "status": "analyzing",
+  "progress": 65
+}
+```
+
+#### 3. 获取研究报告
+
+```http
+GET /api/research/{task_id}/report
+```
+
+响应体：
+
+```json
+{
+  "task_id": "task_001",
+  "status": "completed",
+  "report": "# LangGraph 与 CrewAI 对比分析..."
+}
+```
+
+#### 4. 获取任务详情
+
+```http
+GET /api/research/{task_id}
+```
+
+响应体包括：
+
+1. 原始问题；
+2. 研究计划；
+3. 检索来源；
+4. 分析结果；
+5. 事实核查结果；
+6. 最终报告。
+
+### 验收标准
+
+1. API 可以通过 Swagger 文档访问；
+2. 请求参数有 Pydantic 校验；
+3. 异常返回统一格式；
+4. 支持跨域配置；
+5. 支持基础日志记录。
+
+---
+
+## 6.12 Web UI 模块
+
+### 功能描述
+
+提供一个简单 Web 页面，方便用户输入问题并查看报告。
+
+### 推荐实现
+
+初期使用 Streamlit，后续可升级为 React + FastAPI。
+
+### 页面功能
+
+1. 输入研究问题；
+2. 设置最大研究轮数；
+3. 提交任务；
+4. 显示任务状态；
+5. 展示最终 Markdown 报告；
+6. 展示引用来源；
+7. 支持复制报告。
+
+### 验收标准
+
+1. 用户可以通过页面提交问题；
+2. 页面能展示任务进度；
+3. 页面能展示最终报告；
+4. 页面操作简单，无需命令行。
+
+---
+
+## 7. 非功能需求
+
+## 7.1 性能需求
+
+1. 普通研究任务应在可接受时间内完成；
+2. 单个任务应限制最大搜索次数、最大网页数和最大 token 使用量；
+3. RAG 检索应支持 top_k 参数；
+4. API 不应因单个长任务阻塞其他请求。
+
+## 7.2 稳定性需求
+
+1. 外部搜索 API 调用失败时应重试；
+2. 网页抓取失败不应导致整个任务失败；
+3. LLM 调用超时时应返回明确错误；
+4. Qdrant 不可用时应有降级或错误提示；
+5. 每个节点应有日志记录。
+
+## 7.3 可扩展性需求
+
+1. 支持替换 LLM 模型；
+2. 支持替换搜索 API；
+3. 支持替换向量数据库；
+4. 支持增加新的 LangGraph 节点；
+5. 支持增加新的报告模板；
+6. 支持后续接入用户知识库。
+
+## 7.4 安全需求
+
+1. API Key 不得硬编码；
+2. 所有密钥通过环境变量管理；
+3. 用户输入需要长度限制；
+4. 外部 URL 抓取需要超时限制；
+5. 后续应支持用户鉴权和限流。
+
+## 7.5 可观测性需求
+
+1. 记录每个任务的执行状态；
+2. 记录每个 LangGraph 节点耗时；
+3. 记录 LLM 调用次数和 token 消耗；
+4. 记录检索来源数量；
+5. 记录失败原因；
+6. 后续可接入 Prometheus、Grafana 或 OpenTelemetry。
+
+---
+
+## 8. 技术栈设计
+
+## 8.1 后端核心技术栈
+
+| 模块         | 技术                                |
+| ---------- | --------------------------------- |
+| 编程语言       | Python 3.10+                      |
+| Agent 编排   | LangGraph                         |
+| LLM 调用     | LiteLLM 或 OpenAI SDK              |
+| API 服务     | FastAPI                           |
+| 数据校验       | Pydantic                          |
+| 异步服务       | asyncio                           |
+| Web Server | Uvicorn                           |
+| 配置管理       | python-dotenv / pydantic-settings |
+
+## 8.2 RAG 技术栈
+
+| 模块          | 技术                                   |
+| ----------- | ------------------------------------ |
+| 文本切片        | LangChain Text Splitter 或自定义 Chunker |
+| Embedding   | fastembed / BGE / OpenAI Embedding   |
+| 向量数据库       | Qdrant                               |
+| 向量检索        | qdrant-client                        |
+| 元数据存储       | SQLite，后续可升级 PostgreSQL              |
+| Rerank，后续扩展 | bge-reranker / Cohere Rerank         |
+
+## 8.3 搜索与抓取技术栈
+
+| 模块      | 技术                            |
+| ------- | ----------------------------- |
+| 搜索 API  | Tavily / Serper / Bing Search |
+| 网页正文抽取  | Jina Reader / trafilatura     |
+| HTTP 请求 | httpx / requests              |
+| 失败重试    | tenacity                      |
+| HTML 解析 | BeautifulSoup，可选              |
+
+## 8.4 前端技术栈
+
+| 阶段          | 技术                                  |
+| ----------- | ----------------------------------- |
+| MVP 阶段      | Streamlit                           |
+| 后续阶段        | React / Next.js                     |
+| Markdown 渲染 | react-markdown 或 Streamlit markdown |
+| 状态轮询        | HTTP polling / WebSocket            |
+
+## 8.5 评估与测试技术栈
+
+| 模块     | 技术                     |
+| ------ | ---------------------- |
+| 单元测试   | pytest                 |
+| API 测试 | httpx / pytest-asyncio |
+| 代码规范   | ruff                   |
+| 类型检查   | mypy                   |
+| RAG 评估 | RAGAS，可选               |
+| 数据分析   | pandas                 |
+
+## 8.6 部署技术栈
+
+| 模块     | 技术                                  |
+| ------ | ----------------------------------- |
+| 本地开发   | Docker Compose                      |
+| 后端部署   | Docker                              |
+| 向量数据库  | Qdrant Docker                       |
+| API 服务 | Uvicorn / Gunicorn                  |
+| 环境变量   | .env                                |
+| 后续云部署  | Render / Railway / ECS / Kubernetes |
+
+---
+
+## 9. 系统架构
+
+## 9.1 总体架构
+
+```text
+用户
+  |
+  v
+Web UI / API Client
+  |
+  v
+FastAPI Server
+  |
+  v
+Task Manager
+  |
+  v
+LangGraph Deep Research Workflow
+  |
+  |-- Planner
+  |-- Retriever
+  |-- Web Content Extractor
+  |-- Source Evaluator
+  |-- Evidence Builder
+  |-- RAG Retriever
+  |-- Analyst
+  |-- Fact Checker
+  |-- Report Writer
+  |
+  v
+Report Result
+
+外部依赖：
+- LLM Provider
+- Search API
+- Qdrant
+- Metadata Database
+```
+
+## 9.2 LangGraph 工作流
+
+```text
+START
+  |
+  v
+planner_node
+  |
+  v
+retriever_node
+  |
+  v
+content_extractor_node
+  |
+  v
+source_evaluator_node
+  |
+  v
+evidence_builder_node
+  |
+  v
+analyst_node
+  |
+  v
+fact_checker_node
+  |
+  |-- 证据不足且未超过最大轮数 --> retriever_node
+  |
+  |-- 证据充分或达到最大轮数 --> report_writer_node
+  |
+  v
+END
+```
+
+## 9.3 状态对象设计
+
+```python
+class ResearchState(TypedDict):
+    task_id: str
+    query: str
+    language: str
+    max_rounds: int
+    current_round: int
+    status: str
+
+    research_plan: dict
+    search_results: list[dict]
+    crawled_documents: list[dict]
+    evaluated_sources: list[dict]
+    evidence_chunks: list[dict]
+
+    sub_answers: list[dict]
+    fact_check_result: dict
+    final_report: str
+
+    errors: list[str]
+    created_at: str
+    updated_at: str
+```
+
+---
+
+## 10. 数据模型设计
+
+## 10.1 ResearchTask
+
+| 字段            | 类型       | 说明     |
+| ------------- | -------- | ------ |
+| task_id       | string   | 任务 ID  |
+| query         | string   | 用户问题   |
+| status        | string   | 当前状态   |
+| max_rounds    | integer  | 最大研究轮数 |
+| current_round | integer  | 当前轮数   |
+| final_report  | text     | 最终报告   |
+| error_message | text     | 错误信息   |
+| created_at    | datetime | 创建时间   |
+| updated_at    | datetime | 更新时间   |
+
+## 10.2 Source
+
+| 字段         | 类型       | 说明     |
+| ---------- | -------- | ------ |
+| source_id  | string   | 来源 ID  |
+| task_id    | string   | 所属任务   |
+| title      | string   | 页面标题   |
+| url        | string   | 页面 URL |
+| snippet    | text     | 搜索摘要   |
+| content    | text     | 网页正文   |
+| score      | float    | 信源评分   |
+| accepted   | boolean  | 是否被采用  |
+| created_at | datetime | 创建时间   |
+
+## 10.3 EvidenceChunk
+
+| 字段          | 类型      | 说明       |
+| ----------- | ------- | -------- |
+| chunk_id    | string  | 切片 ID    |
+| task_id     | string  | 所属任务     |
+| source_id   | string  | 所属来源     |
+| chunk_index | integer | 切片序号     |
+| text        | text    | 切片内容     |
+| vector_id   | string  | 向量数据库 ID |
+| metadata    | json    | 元数据      |
+
+---
+
+## 11. 目录结构建议
+
+```text
+deep-research-agent/
+├── app/
+│   ├── main.py                 # FastAPI 入口
+│   ├── api/
+│   │   ├── routes_research.py
+│   │   └── schemas.py
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── logging.py
+│   │   └── exceptions.py
+│   ├── graph/
+│   │   ├── builder.py          # LangGraph 构建
+│   │   ├── state.py            # State 定义
+│   │   └── nodes.py            # 各节点实现
+│   ├── services/
+│   │   ├── llm_service.py
+│   │   ├── search_service.py
+│   │   ├── crawler_service.py
+│   │   ├── rag_service.py
+│   │   ├── vector_store.py
+│   │   └── task_service.py
+│   ├── prompts/
+│   │   ├── planner.md
+│   │   ├── analyst.md
+│   │   ├── fact_checker.md
+│   │   └── report_writer.md
+│   └── models/
+│       ├── task.py
+│       └── source.py
+├── ui/
+│   └── streamlit_app.py
+├── tests/
+│   ├── test_api.py
+│   ├── test_graph.py
+│   └── test_rag.py
+├── docker-compose.yml
+├── pyproject.toml
+├── .env.example
+└── README.md
+```
+
+---
+
+## 12. 环境变量设计
+
+```env
+# LLM
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4o-mini
+LLM_API_KEY=your_api_key
+LLM_BASE_URL=
+
+# Search
+SEARCH_PROVIDER=tavily
+TAVILY_API_KEY=your_tavily_key
+MAX_SEARCH_RESULTS=5
+
+# Qdrant
+QDRANT_URL=http://localhost:6333
+QDRANT_COLLECTION=deep_research_chunks
+
+# RAG
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+CHUNK_SIZE=800
+CHUNK_OVERLAP=120
+RAG_TOP_K=6
+
+# App
+APP_ENV=development
+LOG_LEVEL=INFO
+MAX_ROUNDS=2
+REQUEST_TIMEOUT=30
+```
+
+---
+
+## 13. 开发阶段规划
+
+## 13.1 第一阶段：MVP
+
+目标：跑通完整 Deep Research 主链路。
+
+开发内容：
+
+1. FastAPI 创建研究任务接口；
+2. LangGraph 基础工作流；
+3. Planner 节点；
+4. 搜索节点；
+5. 网页正文抓取；
+6. Qdrant 向量入库；
+7. RAG 检索；
+8. Analyst 节点；
+9. Report Writer 节点；
+10. 简单 Streamlit 页面。
+
+交付标准：
+
+1. 用户输入问题后可以生成 Markdown 报告；
+2. 报告中包含引用来源；
+3. 系统可以通过 API 调用；
+4. 本地 Docker Compose 可启动 Qdrant。
+
+## 13.2 第二阶段：事实核查与多轮研究
+
+目标：提升报告可信度。
+
+开发内容：
+
+1. Fact Checker 节点；
+2. 证据不足判断；
+3. 自动补充检索；
+4. 最大轮数控制；
+5. 引用准确性检查；
+6. 任务状态查询。
+
+交付标准：
+
+1. 系统能判断证据不足；
+2. 系统能自动进入下一轮检索；
+3. 达到最大轮数后能输出限制说明；
+4. 用户可以查询任务进度。
+
+## 13.3 第三阶段：评估与优化
+
+目标：提升质量、稳定性和可维护性。
+
+开发内容：
+
+1. 构建测试问题集；
+2. 增加 RAG 评估指标；
+3. 增加日志和 token 统计；
+4. 增加异常处理；
+5. 增加 API 测试；
+6. 优化 Prompt；
+7. 支持报告模板。
+
+交付标准：
+
+1. 有固定评测集；
+2. 有自动化测试；
+3. 有基本质量指标；
+4. 报告质量可持续优化。
+
+## 13.4 第四阶段：产品化扩展
+
+目标：接近可部署应用。
+
+开发内容：
+
+1. 用户鉴权；
+2. 历史任务管理；
+3. 报告导出；
+4. 多模型配置；
+5. WebSocket 实时进度；
+6. 管理后台；
+7. 部署监控。
+
+交付标准：
+
+1. 多用户可用；
+2. 支持历史报告查看；
+3. 支持线上部署；
+4. 支持基础监控和限流。
+
+---
+
+## 14. 关键验收指标
+
+## 14.1 功能指标
+
+1. 系统能够完成端到端研究流程；
+2. 系统能够生成结构化报告；
+3. 系统能够展示引用来源；
+4. 系统能够进行多轮补充检索；
+5. 系统能够通过 FastAPI 对外提供服务；
+6. 系统能够通过 Web UI 使用。
+
+## 14.2 质量指标
+
+1. 生成报告与用户问题高度相关；
+2. 关键结论有来源支撑；
+3. 引用来源可追溯；
+4. 明显无关网页会被过滤；
+5. 证据不足时不会强行下结论。
+
+## 14.3 工程指标
+
+1. 代码模块清晰；
+2. LangGraph 节点职责单一；
+3. 配置通过环境变量管理；
+4. API 有清晰 schema；
+5. 主要模块有测试；
+6. 本地环境可一键启动。
+
+---
+
+## 15. 风险与应对方案
+
+## 15.1 LLM 幻觉风险
+
+风险：模型可能生成无来源支撑的结论。
+
+应对：
+
+1. 强制基于证据生成；
+2. 报告中保留引用；
+3. 增加事实核查节点；
+4. 对证据不足内容显式标记。
+
+## 15.2 搜索质量不稳定
+
+风险：搜索 API 返回结果质量不稳定。
+
+应对：
+
+1. 多关键词搜索；
+2. 信源评分；
+3. URL 去重；
+4. 支持更换搜索供应商。
+
+## 15.3 网页抓取失败
+
+风险：部分网页无法抓取正文。
+
+应对：
+
+1. 设置超时和重试；
+2. 使用多个正文抽取方案；
+3. 抓取失败时跳过该来源；
+4. 保留失败日志。
+
+## 15.4 成本过高
+
+风险：多轮检索和多次 LLM 调用导致成本上升。
+
+应对：
+
+1. 限制最大轮数；
+2. 限制每轮搜索数量；
+3. 控制 RAG top_k；
+4. 使用小模型处理部分节点；
+5. 增加 token 统计。
+
+## 15.5 响应时间过长
+
+风险：Deep Research 任务执行时间较长。
+
+应对：
+
+1. 使用异步任务；
+2. 前端轮询任务状态；
+3. 对搜索和抓取进行并发处理；
+4. 设置最大网页数和超时时间。
+
+---
+
+## 16. MVP 最小可行范围
+
+MVP 阶段只需要实现以下功能：
+
+1. 用户通过 API 提交研究问题；
+2. Planner 生成研究计划；
+3. Retriever 调用搜索 API；
+4. 抓取网页正文；
+5. 将正文切片并写入 Qdrant；
+6. RAG 检索相关证据；
+7. Analyst 生成子问题分析；
+8. Report Writer 输出 Markdown 报告；
+9. Streamlit 提供简单页面；
+10. Docker Compose 启动 Qdrant。
+
+MVP 阶段可暂缓实现：
+
+1. 用户登录；
+2. 历史任务管理；
+3. 多用户隔离；
+4. 复杂权限系统；
+5. PDF/DOCX 导出；
+6. 高级评估系统；
+7. 管理后台。
+
+---
+
+## 17. 项目成功标准
+
+当系统满足以下条件时，可以认为项目第一版成功：
+
+1. 能够根据用户输入自动生成研究报告；
+2. 报告内容不是单纯大模型编造，而是基于检索证据；
+3. 报告中包含可追溯来源；
+4. 系统使用 LangGraph 管理 Agent 工作流；
+5. 系统使用 Qdrant 或类似向量数据库完成 RAG 检索；
+6. 系统通过 FastAPI 提供标准接口；
+7. 系统结构清晰，方便后续扩展；
+8. 项目可以作为 Deep Research Agent 工程化学习案例。
+
+---
+
+## 18. 后续扩展方向
+
+1. 增加多 Agent 协作，例如 Planner Agent、Researcher Agent、Critic Agent、Writer Agent；
+2. 增加 Reranker，提高证据检索质量；
+3. 支持上传本地 PDF、Word、Markdown 文档作为私有知识源；
+4. 支持报告导出为 PDF、DOCX；
+5. 支持知识库长期保存；
+6. 支持用户反馈优化；
+7. 支持多语言研究；
+8. 支持图表生成；
+9. 支持定时研究任务；
+10. 支持企业内部知识库接入。
+
+---
+
+建议你后续可以基于这份 PRD 继续拆成三份材料：**技术架构设计文档、数据库/API 设计文档、开发任务拆解表**。

@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 输出
+output/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 环境变量
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率
+htmlcov/
+.coverage
+coverage/
+
+# 测试数据
+tests/data/
