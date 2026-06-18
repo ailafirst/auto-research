@@ -33,3 +33,5 @@ coverage/
 
 # 测试数据
 tests/data/
+
+benchmark/results/
