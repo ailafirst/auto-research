@@ -103,6 +103,13 @@ async def _run_research(task_id: str) -> None:
         }
 
         def _build_state(round_num: int, extra: dict | None = None) -> dict:
+            # 将用户显式设置的参数作为 hint 传给 planner，不设置时传空 dict 让 LLM 自行判断
+            user_hints: dict = {}
+            if task.report_type != "deep":   # 非默认值才视为有意设置
+                user_hints["report_type"] = task.report_type
+            if task.search_depth != "advanced":
+                user_hints["search_depth"] = task.search_depth
+
             state = {
                 "task_id": task_id,
                 "query": task.query,
@@ -110,6 +117,8 @@ async def _run_research(task_id: str) -> None:
                 "max_rounds": task.max_rounds,
                 "current_round": round_num,
                 "status": "planning",
+                "user_hints": user_hints,
+                "research_strategy": {},
                 "research_plan": {},
                 "sub_questions": [],
                 "search_queries": [],

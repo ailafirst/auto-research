@@ -18,6 +18,12 @@ class ResearchState(TypedDict):
     current_round: int
     status: str
 
+    # 用户偏好提示（可选，不传则由 LLM 自动判断）
+    user_hints: dict[str, Any]
+
+    # 研究策略（由 planner 自动分析生成）
+    research_strategy: dict[str, Any]
+
     # 研究计划
     research_plan: dict[str, Any]
     sub_questions: list[dict[str, Any]]

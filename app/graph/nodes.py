@@ -14,7 +14,6 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
 from typing import Any
 
 from app.core.config import settings
@@ -92,7 +91,7 @@ def _read_prompt(name: str) -> str:
 
 
 async def planner_node(state: ResearchState) -> dict[str, Any]:
-    """研究规划节点 — 将用户问题拆解为研究计划。"""
+    """研究规划节点 — 自动分析问题策略并生成研究计划。"""
     logger.info("Planner 节点开始执行")
 
     from app.services.llm_service import LLMService
@@ -100,20 +99,51 @@ async def planner_node(state: ResearchState) -> dict[str, Any]:
     llm = LLMService()
     prompt = _read_prompt("planner")
 
+    # 构建用户消息：问题 + 语言 + 可选的用户偏好提示
+    hints = state.get("user_hints") or {}
+    hint_lines: list[str] = []
+    if hints.get("report_type"):
+        hint_lines.append(f"用户偏好报告类型: {hints['report_type']}（summary=简要概览 / deep=深入分析 / comparison=对比报告）")
+    if hints.get("search_depth"):
+        hint_lines.append(f"用户偏好搜索深度: {hints['search_depth']}（basic=轻量 / advanced=全面）")
+    if hints.get("note"):
+        hint_lines.append(f"用户备注: {hints['note']}")
+
+    hint_block = ("\n\n用户可选偏好（仅供参考，可根据问题实际情况调整）：\n" + "\n".join(hint_lines)) if hint_lines else ""
+
+    user_message = (
+        f"研究问题: {state['query']}\n"
+        f"输出语言: {state.get('language', 'zh-CN')}"
+        f"{hint_block}\n\n"
+        f"请先分析问题（question_analysis），再生成研究计划。"
+    )
+
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": (
-            f"研究问题: {state['query']}\n"
-            f"语言: {state.get('language', 'zh-CN')}\n"
-            f"请生成研究计划。"
-        )},
+        {"role": "user", "content": user_message},
     ]
 
-    content = await llm.chat(messages, temperature=0.3)
+    content = await llm.chat(
+        messages,
+        temperature=0.3,
+        response_format={"type": "json_object"},
+    )
     plan = json.loads(content)
 
+    strategy = plan.get("question_analysis", {})
     sub_questions = plan.get("sub_questions", [])
+
+    depth = strategy.get("depth", "medium")
+    domain = strategy.get("domain", "general")
+    intent = strategy.get("intent", "unknown")
+
+    logger.info(
+        "Planner 策略: intent=%s, domain=%s, depth=%s, sub_questions=%d",
+        intent, domain, depth, len(sub_questions),
+    )
+
     return {
+        "research_strategy": strategy,
         "research_plan": plan,
         "sub_questions": sub_questions,
         "search_queries": [
@@ -121,7 +151,10 @@ async def planner_node(state: ResearchState) -> dict[str, Any]:
             for q in sq.get("search_queries", [sq.get("question", "")])
         ],
         "progress": 15,
-        "progress_message": f"研究计划已生成: {len(sub_questions)} 个子问题",
+        "progress_message": (
+            f"研究计划已生成: {len(sub_questions)} 个子问题"
+            f"（{depth}深度 · {domain}领域 · {intent}意图）"
+        ),
     }
 
 
@@ -274,7 +307,6 @@ async def _analyze_single_question(
     qdrant_ok: bool,
     accepted_docs: list[dict[str, Any]],
     task_id: str,
-    use_llm: bool,
 ) -> dict[str, Any]:
     """分析单个子问题（可并发调用）。"""
     import re
@@ -320,65 +352,36 @@ async def _analyze_single_question(
 
     context_text = "\n\n---\n\n".join(context_material) if context_material else "无可用的来源内容。"
 
-    # 3. LLM 分析
-    answer_text = ""
-    confidence = 0.1
-    evidence_gap = True
-    citations: list[str] = []
+    # LLM 分析
+    llm = LLMService()
+    prompt = _read_prompt("analyst")
+    messages = [
+        {"role": "system",
+         "content": f"{prompt}\n\n你是一个专业研究分析师。请基于提供的来源内容回答。"},
+        {"role": "user",
+         "content": f"子问题: {question}\n\n可用来源:\n{context_text}\n\n请返回 JSON。"},
+    ]
+    result_str = await llm.chat(messages, temperature=0.3)
 
-    if use_llm:
-        try:
-            llm = LLMService()
-            prompt = _read_prompt("analyst")
-            messages = [
-                {"role": "system",
-                 "content": f"{prompt}\n\n你是一个专业研究分析师。请基于提供的来源内容回答。"},
-                {"role": "user",
-                 "content": f"子问题: {question}\n\n可用来源:\n{context_text}\n\n请返回 JSON。"},
-            ]
-            result_str = await llm.chat(messages, temperature=0.3)
+    try:
+        result = json_mod.loads(result_str)
+    except json_mod.JSONDecodeError:
+        match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result_str, re.DOTALL)
+        if not match:
+            raise ValueError(f"LLM 返回格式无法解析 [{qid}]: {result_str[:200]}")
+        result = json_mod.loads(match.group(1))
 
-            try:
-                result = json_mod.loads(result_str)
-            except json_mod.JSONDecodeError:
-                match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result_str, re.DOTALL)
-                result = json_mod.loads(match.group(1)) if match else None
-
-            if result:
-                answer_text = result.get("answer", "")
-                default_cites = [
-                    f"R{i+1}" if rag_chunks else f"S{i+1}"
-                    for i in range(min(3, len(context_material)))
-                ]
-                citations = result.get("citations", default_cites)
-                confidence = result.get("confidence", 0.5)
-                evidence_gap = result.get("evidence_gap", len(context_material) == 0)
-
-        except Exception as exc:
-            logger.warning("LLM 分析失败 [%s]: %s", qid, exc)
-
-    # 4. 降级方案
-    if not answer_text:
-        if context_material:
-            answer_text = f"检索到 {len(context_material)} 个相关来源，以下是主要内容：\n\n"
-            for m in context_material[:5]:
-                answer_text += f"{m[:400]}\n\n"
-        else:
-            answer_text = "未找到相关内容。"
-        confidence = min(0.5, 0.2 + len(context_material) * 0.05)
-        evidence_gap = len(context_material) == 0
-        citations = [
-            f"R{i+1}" if rag_chunks else f"S{i+1}"
-            for i in range(min(3, len(context_material)))
-        ]
-
+    default_cites = [
+        f"R{i+1}" if rag_chunks else f"S{i+1}"
+        for i in range(min(3, len(context_material)))
+    ]
     return {
         "sub_question_id": qid,
         "question": question,
-        "answer": answer_text,
-        "citations": citations,
-        "confidence": round(confidence, 2),
-        "evidence_gap": evidence_gap,
+        "answer": result.get("answer", ""),
+        "citations": result.get("citations", default_cites),
+        "confidence": round(result.get("confidence", 0.5), 2),
+        "evidence_gap": result.get("evidence_gap", len(context_material) == 0),
     }
 
 
@@ -397,14 +400,11 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     # 初始化共享 RAG 服务（AsyncQdrantClient 支持并发访问）
     rag_service: RAGService | None = None
     qdrant_ok = False
-    if settings.llm_api_key:
-        try:
-            rag_service = RAGService()
-            qdrant_ok = await rag_service.vector_store.health_check()
-        except Exception:
-            qdrant_ok = False
-
-    use_llm = bool(settings.llm_api_key)
+    try:
+        rag_service = RAGService()
+        qdrant_ok = await rag_service.vector_store.health_check()
+    except Exception:
+        qdrant_ok = False
 
     # 最多同时发起 5 个 LLM 并发调用，避免触发 API 限速
     sem = asyncio.Semaphore(5)
@@ -417,7 +417,6 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
                 qdrant_ok=qdrant_ok,
                 accepted_docs=accepted_docs,
                 task_id=task_id,
-                use_llm=use_llm,
             )
 
     # 所有子问题并发执行，return_exceptions=True 保证单个失败不影响其他结果
@@ -461,99 +460,49 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
     """事实核查节点 — 使用 LLM 检查分析结果的可信度。"""
     logger.info("Fact Checker 节点开始执行")
 
+    import json as json_mod
+    import re
+    from app.services.llm_service import LLMService
+
     sub_answers = state.get("sub_answers", [])
-    issues: list[dict[str, Any]] = []
-    follow_up: list[str] = []
 
-    # 尝试使用 LLM 进行真实的事实核查
-    if settings.llm_api_key:
-        try:
-            from app.services.llm_service import LLMService
+    answers_text = "\n\n".join([
+        f"子问题 {a.get('sub_question_id', '?')}: {a.get('question', '')}\n"
+        f"分析: {a.get('answer', '')[:500]}\n"
+        f"置信度: {a.get('confidence', 0):.0%}\n"
+        f"引用: {', '.join(a.get('citations', []))}"
+        for a in sub_answers
+    ])
 
-            answers_text = "\n\n".join([
-                f"子问题 {a.get('sub_question_id', '?')}: {a.get('question', '')}\n"
-                f"分析: {a.get('answer', '')[:500]}\n"
-                f"置信度: {a.get('confidence', 0):.0%}\n"
-                f"引用: {', '.join(a.get('citations', []))}"
-                for a in sub_answers
-            ])
+    llm = LLMService()
+    prompt = _read_prompt("fact_checker")
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": (
+            f"请对以下分析结果进行事实核查。\n\n{answers_text}\n\n返回 JSON。"
+        )},
+    ]
+    result_str = await llm.chat(messages, temperature=0.3)
 
-            llm = LLMService()
-            prompt = _read_prompt("fact_checker")
+    try:
+        result = json_mod.loads(result_str)
+    except json_mod.JSONDecodeError:
+        match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result_str, re.DOTALL)
+        if not match:
+            raise ValueError(f"LLM 返回格式无法解析: {result_str[:200]}")
+        result = json_mod.loads(match.group(1))
 
-            messages = [
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": (
-                    f"请对以下分析结果进行事实核查。\n\n{answers_text}\n\n"
-                    f"返回 JSON。"
-                )},
-            ]
-
-            result_str = await llm.chat(messages, temperature=0.3)
-
-            import json as json_mod
-            import re
-            try:
-                result = json_mod.loads(result_str)
-            except json_mod.JSONDecodeError:
-                match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', result_str, re.DOTALL)
-                if match:
-                    result = json_mod.loads(match.group(1))
-                else:
-                    raise
-
-            issues = result.get("issues", [])
-            follow_up = result.get("follow_up_queries", [])
-
-            fact_check_result = {
-                "passed": result.get("passed", len(issues) == 0),
-                "issues": issues,
-                "follow_up_queries": follow_up[:5],
-            }
-
-            return {
-                "fact_check_result": fact_check_result,
-                "fact_check_passed": fact_check_result["passed"],
-                "follow_up_queries": follow_up[:5],
-                "progress": 85,
-                "progress_message": (
-                    f"事实核查完成: {len(issues)} 个问题"
-                    if issues else "事实核查通过"
-                ),
-            }
-
-        except Exception as exc:
-            logger.warning("LLM 事实核查失败，降级处理: %s", exc)
-
-    # 降级方案：基于 evidence_gap 和 confidence 的规则检查
-    for answer in sub_answers:
-        if answer.get("evidence_gap"):
-            issues.append({
-                "type": "insufficient_evidence",
-                "claim": answer.get("question", ""),
-                "reason": "当前检索到的证据不足以完整回答此子问题",
-            })
-            for kw in answer.get("question", "").split()[:3]:
-                if len(kw) > 2:
-                    follow_up.append(f"{kw} 详细资料")
-
-        if answer.get("confidence", 1.0) < 0.3:
-            issues.append({
-                "type": "low_confidence",
-                "claim": answer.get("question", ""),
-                "reason": f"置信度仅 {answer.get('confidence', 0):.0%}，需要更多证据",
-            })
-
-    passed = len(issues) == 0
+    issues = result.get("issues", [])
+    follow_up = result.get("follow_up_queries", [])
     fact_check_result = {
-        "passed": passed,
+        "passed": result.get("passed", len(issues) == 0),
         "issues": issues,
         "follow_up_queries": follow_up[:5],
     }
 
     return {
         "fact_check_result": fact_check_result,
-        "fact_check_passed": passed,
+        "fact_check_passed": fact_check_result["passed"],
         "follow_up_queries": follow_up[:5],
         "progress": 85,
         "progress_message": (
@@ -564,8 +513,10 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
 
 
 async def report_writer_node(state: ResearchState) -> dict[str, Any]:
-    """报告生成节点 — 整合所有结果为最终报告。"""
+    """报告生成节点 — 使用 LLM 生成最终 Markdown 报告。"""
     logger.info("Report Writer 节点开始执行")
+
+    from app.services.llm_service import LLMService
 
     query = state["query"]
     research_plan = state.get("research_plan", {})
@@ -574,83 +525,48 @@ async def report_writer_node(state: ResearchState) -> dict[str, Any]:
     evaluated = state.get("evaluated_sources", [])
     fact_check = state.get("fact_check_result", {})
 
-    # 收集引用来源
-    sources: list[str] = []
+    sub_answers_text = "\n\n".join([
+        f"### {a.get('question', '')}\n"
+        f"置信度: {a.get('confidence', 0):.0%}\n"
+        f"回答: {a.get('answer', '')}\n"
+        f"引用: {', '.join(a.get('citations', []))}"
+        for a in sub_answers
+    ])
+
     seen_urls: set[str] = set()
+    source_lines: list[str] = []
     for doc in crawled_docs:
         url = doc.get("url", "")
         if url and url not in seen_urls:
             seen_urls.add(url)
-            sources.append(f"- [{doc.get('title', '来源')}]({url})")
+            source_lines.append(f"- [{doc.get('title', url)}]({url})")
+    sources_text = "\n".join(source_lines) if source_lines else "（无）"
 
-    # 构建报告
-    report = f"""# {research_plan.get('research_goal', query)}
+    issues = fact_check.get("issues", [])
+    issues_text = "\n".join([
+        f"- [{i.get('type')}] {i.get('claim')}: {i.get('reason')}"
+        for i in issues
+    ]) if issues else "无"
 
-> **自动生成的研究报告**
-> 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-> 研究轮次: {state.get('current_round', 1)}/{state.get('max_rounds', 2)}
+    user_message = (
+        f"研究问题: {query}\n"
+        f"研究目标: {research_plan.get('research_goal', query)}\n"
+        f"问题类型: {research_plan.get('question_type', 'general')}\n"
+        f"研究轮次: {state.get('current_round', 1)}/{state.get('max_rounds', 2)}\n"
+        f"通过评估的来源数: {sum(1 for e in evaluated if e.get('accepted'))}/{len(crawled_docs)}\n\n"
+        f"## 各子问题分析结果\n\n{sub_answers_text}\n\n"
+        f"## 事实核查结果\n{issues_text}\n\n"
+        f"## 参考来源\n{sources_text}\n\n"
+        f"请根据以上信息生成完整的 Markdown 研究报告。"
+    )
 
----
-
-## 摘要
-
-本研究针对「{query}」进行了多轮搜索与分析。
-共检索 {len(crawled_docs)} 个来源，其中 {sum(1 for e in evaluated if e.get('accepted'))} 个通过质量评估。
-
----
-
-## 研究问题说明
-
-**原始问题**: {query}
-
-**问题类型**: {research_plan.get('question_type', 'general')}
-
-**研究计划包含 {len(research_plan.get('sub_questions', []))} 个子问题**:
-
-"""
-
-    for sq in research_plan.get("sub_questions", []):
-        report += f"- {sq.get('question', '')}\n"
-
-    report += "\n---\n\n## 核心结论\n\n"
-
-    for answer in sub_answers:
-        report += f"""### {answer.get('question', '')}
-
-**置信度**: {answer.get('confidence', 0):.0%}
-
-{answer.get('answer', '*(无内容)*')}
-
-**引用**: {', '.join(answer.get('citations', [])) if answer.get('citations') else '无直接引用'}
-
----
-
-"""
-
-    # 事实核查结果
-    if fact_check:
-        issues = fact_check.get("issues", [])
-        if issues:
-            report += "## ⚠️ 事实核查发现的问题\n\n"
-            for issue in issues:
-                report += f"- **[{issue.get('type', 'issue')}]** {issue.get('claim', '')}: {issue.get('reason', '')}\n"
-            report += "\n"
-
-    # 风险与不确定性
-    evidence_gaps = [a for a in sub_answers if a.get("evidence_gap")]
-    if evidence_gaps:
-        report += "## 风险与不确定性\n\n"
-        report += "以下子问题的证据可能不够充分：\n\n"
-        for gap in evidence_gaps:
-            report += f"- ⚠️ {gap.get('question', '')}\n"
-        report += "\n"
-
-    # 参考来源
-    report += "## 参考来源\n\n"
-    if sources:
-        report += "\n".join(sources)
-    else:
-        report += "*(无可用来源)*"
+    llm = LLMService()
+    prompt = _read_prompt("report_writer")
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": user_message},
+    ]
+    report = await llm.chat(messages, temperature=0.3)
 
     return {
         "final_report": report,

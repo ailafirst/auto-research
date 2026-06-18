@@ -20,6 +20,8 @@ async def test_planner_node_basic() -> None:
         "max_rounds": 2,
         "current_round": 1,
         "status": "planning",
+        "user_hints": {},
+        "research_strategy": {},
         "research_plan": {},
         "sub_questions": [],
         "search_queries": [],
