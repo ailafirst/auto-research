@@ -233,68 +233,55 @@ with tab1:
                 st.success(f"✅ 任务已创建！任务 ID: {task_id}")
                 st.session_state.current_task = task_id
                 st.session_state.selected_task = task_id
+                st.session_state.poll_count = 0
                 time.sleep(0.5)
                 st.rerun()
 
-    # 当前任务进度
+    # 当前任务进度 — 用 st.fragment(run_every=2) 自动刷新，不阻塞主线程
     current_task_id = st.session_state.get("current_task")
     if current_task_id:
         st.divider()
-        st.subheader(f"📊 任务进度")
+        st.subheader("📊 任务进度")
 
-        progress_placeholder = st.empty()
-        status_placeholder = st.empty()
-        report_placeholder = st.empty()
-
-        # 轮询任务状态（最多等 5 分钟）
-        for _ in range(300):
-            status_data = call_api("GET", f"/api/research/{current_task_id}/status")
+        @st.fragment(run_every=2)
+        def _progress_panel(task_id: str) -> None:
+            status_data = call_api("GET", f"/api/research/{task_id}/status")
             if not status_data:
-                break
+                st.error("无法获取任务状态，请检查 API 服务。")
+                return
 
             task_status = status_data.get("status", "")
             progress_val = status_data.get("progress", 0)
             message = status_data.get("progress_message", "")
             current_round = status_data.get("current_round", 0)
-            max_rounds = status_data.get("max_rounds", 2)
+            max_rounds_val = status_data.get("max_rounds", 2)
 
-            # 进度条和状态
-            with progress_placeholder.container():
-                st.progress(progress_val / 100, text=message or status_to_cn(task_status))
-                st.markdown(
-                    f'<div class="progress-status">'
-                    f'<span class="status-badge {get_status_color(task_status)}">'
-                    f'{status_to_cn(task_status)}</span>'
-                    f' 第 {current_round}/{max_rounds} 轮'
-                    f' | 进度 {progress_val}%'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
+            st.progress(progress_val / 100, text=message or status_to_cn(task_status))
+            st.markdown(
+                f'<div class="progress-status">'
+                f'<span class="status-badge {get_status_color(task_status)}">'
+                f'{status_to_cn(task_status)}</span>'
+                f' 第 {current_round}/{max_rounds_val} 轮'
+                f' | 进度 {progress_val}%'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
             if task_status == "completed":
-                status_placeholder.success("🎉 研究完成！")
-                report_data = call_api("GET", f"/api/research/{current_task_id}/report")
+                st.success("🎉 研究完成！")
+                report_data = call_api("GET", f"/api/research/{task_id}/report")
                 if report_data and report_data.get("report"):
-                    with report_placeholder.container():
-                        st.divider()
-                        st.subheader("📄 研究报告")
-                        render_report(report_data["report"])
-                break
+                    st.divider()
+                    st.subheader("📄 研究报告")
+                    render_report(report_data["report"])
             elif task_status == "failed":
-                detail = call_api("GET", f"/api/research/{current_task_id}")
+                detail = call_api("GET", f"/api/research/{task_id}")
                 err = detail.get("error_message", "未知错误") if detail else "未知错误"
-                status_placeholder.error(f"❌ 研究失败: {err}")
-                break
-            elif task_status == "pending":
-                status_placeholder.info("⏳ 任务排队中...")
+                st.error(f"❌ 研究失败: {err}")
+            else:
+                st.caption("⏳ 研究进行中，每 2 秒自动刷新…")
 
-            time.sleep(1)
-        else:
-            status_placeholder.warning(
-                "⏰ 研究仍在进行中，请稍后刷新页面查看。"
-                f"\n\n任务 ID: `{current_task_id}` "
-                "可到「查看报告」页签输入此 ID 获取结果。"
-            )
+        _progress_panel(current_task_id)
 
 with tab2:
     st.header("查看研究报告")

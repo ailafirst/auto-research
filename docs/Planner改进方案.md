@@ -157,6 +157,44 @@ Planner 生成的子问题越多，加速效果越显著。`Semaphore(5)` 防止
 
 ---
 
+### 1.6 多轮补充研究修复（V0.1.2）
+
+**问题（修复前）**：第 2 轮将 `sub_questions` 重置为空，`planner_node` 对同一个 `query` 从头规划，生成几乎相同的计划；`follow_up_queries` 作为初始 `search_queries` 传入后立刻被 planner 覆盖，实际从未被搜索。第 2 轮等于原样重做第 1 轮。
+
+**修复方案（简化版方向 D）**：
+
+1. **`routes_research.py`**：第 2 轮 `new_state` 携带第 1 轮的 `sub_questions`、`research_plan`、`research_strategy`、`follow_up_queries`，不再重置为空。
+
+2. **`planner_node`（`nodes.py`）**：检测到 `sub_questions` 非空且 `current_round > 1` 时，直接透传已有计划，跳过 LLM 调用：
+
+```python
+existing_sqs = state.get("sub_questions", [])
+if existing_sqs and state.get("current_round", 1) > 1:
+    return {
+        "sub_questions":     existing_sqs,
+        "research_plan":     state.get("research_plan", {}),
+        "research_strategy": state.get("research_strategy", {}),
+        "search_queries":    state.get("follow_up_queries", []),
+        ...
+    }
+```
+
+3. **`retriever_node`（`nodes.py`）**：第 2 轮检测到 `follow_up_queries` 非空时，仅搜索 follow_up 查询（不重复第 1 轮搜索词）：
+
+```python
+follow_ups = state.get("follow_up_queries", [])
+if follow_ups and state.get("current_round", 1) > 1:
+    tagged = [(q, "") for q in follow_ups[:5]]   # 结果由 analyst fallback 全局使用
+else:
+    tagged = [(q, sq_id) for sq in sub_questions for q in sq["search_queries"]]
+```
+
+**效果**：第 2 轮 planner 节省一次 LLM 调用（约 5–10s），retriever 搜索 fact_checker 识别的补充方向（不重复），analyst 用新证据重新分析原有子问题结构，report_writer 生成最终报告。
+
+**与完整方向 D 的差异**：当前实现跳过了"让 LLM 基于 issues 生成针对性子问题"这一步，改为直接复用第 1 轮子问题结构 + follow_up 搜索。完整方向 D 的价值在于第 2 轮能新增专门针对证据缺口的子问题，当前简化版仍用旧子问题框架重新填充新证据。
+
+---
+
 ## 二、待实现优化方向
 
 ### 方向 B：搜索词语义去重 ⭐ 推荐优先
@@ -210,11 +248,11 @@ merged = merge_and_dedup(plans)
 
 ---
 
-### 方向 D：多轮感知规划
+### 方向 D：多轮感知规划（已部分实现）
 
-**问题**：当前第 2 轮研究直接用 `follow_up_queries` 跳过 planner，planner 不知道第 1 轮已发现了什么，导致重复搜索已有答案的问题，无法针对性补充缺口。
+**已实施（V0.1.2 简化版）**：见 §1.6。planner 第 2 轮跳过 LLM 重规划，retriever 改用 follow_up_queries 针对性补充搜索。
 
-**方案**：round ≥ 2 时让 planner 读取上一轮的 `fact_check_result.issues` 和 `sub_answers`，生成**针对性补充计划**：
+**待完成（完整版）**：round ≥ 2 时让 planner 读取上一轮的 `fact_check_result.issues` 和 `sub_answers`，用 LLM 生成**专门针对证据缺口的新子问题**：
 
 ```python
 if state["current_round"] > 1:
@@ -223,7 +261,7 @@ if state["current_round"] > 1:
         "issues": state["fact_check_result"]["issues"],
         "follow_up": state["follow_up_queries"],
     }
-    prompt = build_followup_plan_prompt(context)
+    prompt = build_followup_plan_prompt(context)   # 新增 planner_followup.md
 else:
     prompt = build_initial_plan_prompt(query)
 ```
@@ -255,8 +293,9 @@ planner → retriever → [reflection] → （匹配度低 → re-plan） → co
 | 优先级 | 方向 | 状态 | 理由 |
 |--------|------|------|------|
 | ✅ 已完成 | A 自适应深度 | 已内化进 Prompt V2 | LLM 自主推断，无需外部参数驱动 |
+| ✅ 已完成 | D 多轮感知规划（简化版） | V0.1.2：planner 跳过重规划，retriever 用 follow_up | 修复第 2 轮实际重做第 1 轮的 bug |
 | ★★★ 立即做 | B 搜索词去重 | 待实现 | 减少下游压力，复用已有 fastembed，无新依赖 |
 | ★★☆ 下一迭代 | C 多视角并行规划 | 待实现 | 质量提升显著，token 成本增加 3× |
-| ★★☆ 下一迭代 | D 多轮感知规划 | 待实现 | 改善多轮研究核心痛点 |
+| ★★☆ 下一迭代 | D 多轮感知规划（完整版） | 待实现 | LLM 针对证据缺口生成新子问题，质量更高 |
 | ★☆☆ 长期 | E 领域专化细化 | 待实现 | 当前 angle bank 已有基础，细化收益递减 |
 | ★☆☆ 长期 | F 反思循环 | 待实现 | 需修改 LangGraph 图结构，复杂度高 |
