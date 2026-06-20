@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3
 
     # --- Search ---
-    search_provider: str = "duckduckgo"
+    use_tavily: bool = True    # true=Tavily，false=DuckDuckGo
     tavily_api_key: str = ""
     serper_api_key: str = ""
     bing_api_key: str = ""

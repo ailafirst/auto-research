@@ -31,6 +31,7 @@ class ResearchState(TypedDict):
 
     # 搜索与抓取
     search_results: list[dict[str, Any]]
+    search_summaries: list[dict[str, Any]]   # Tavily 每条查询的摘要答案 [{sq_id, answer}]
     crawled_documents: list[dict[str, Any]]
 
     # 信源评估

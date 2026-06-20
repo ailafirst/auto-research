@@ -63,6 +63,7 @@ def _build_state(task: dict) -> dict:
         "sub_questions":     [],
         "search_queries":    [],
         "search_results":    [],
+        "search_summaries":  [],
         "crawled_documents": [],
         "evaluated_sources": [],
         "evidence_chunks":   [],

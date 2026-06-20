@@ -66,7 +66,7 @@ class LLMService:
             if response_format:
                 kwargs["response_format"] = response_format
 
-            response = await litellm.acompletion(**kwargs)
+            response = await litellm.acompletion(**kwargs, timeout=120)
             content = response.choices[0].message.content or ""
 
             # Token 统计

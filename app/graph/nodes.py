@@ -94,6 +94,23 @@ async def planner_node(state: ResearchState) -> dict[str, Any]:
     """研究规划节点 — 自动分析问题策略并生成研究计划。"""
     logger.info("Planner 节点开始执行")
 
+    # 多轮补充研究（round > 1）：sub_questions 已由上轮传入，跳过重新规划
+    existing_sqs = state.get("sub_questions", [])
+    if existing_sqs and state.get("current_round", 1) > 1:
+        follow_ups = state.get("follow_up_queries", [])
+        logger.info(
+            "Planner 跳过（第 %d 轮），沿用第 1 轮计划（%d 个子问题）",
+            state["current_round"], len(existing_sqs),
+        )
+        return {
+            "research_strategy": state.get("research_strategy", {}),
+            "research_plan":     state.get("research_plan", {}),
+            "sub_questions":     existing_sqs,
+            "search_queries":    follow_ups or state.get("search_queries", []),
+            "progress":          10,
+            "progress_message":  f"沿用第 1 轮研究计划（{len(existing_sqs)} 个子问题）",
+        }
+
     from app.services.llm_service import LLMService
 
     llm = LLMService()
@@ -159,52 +176,125 @@ async def planner_node(state: ResearchState) -> dict[str, Any]:
 
 
 async def retriever_node(state: ResearchState) -> dict[str, Any]:
-    """信息检索节点 — 搜索相关网页。"""
+    """信息检索节点 — 所有查询完全并发，结果携带 sub_question_id。"""
     logger.info("Retriever 节点开始执行")
 
     search_service = SearchService()
-    queries = state.get("search_queries", [state["query"]])
+    sub_questions = state.get("sub_questions", [])
 
-    results = await search_service.multi_search(
-        queries=queries,
-        max_results_per_query=settings.max_search_results,
-    )
+    all_results: list[dict[str, Any]] = []
 
+    if sub_questions:
+        follow_ups = state.get("follow_up_queries", [])
+        current_round = state.get("current_round", 1)
+
+        if follow_ups and current_round > 1:
+            # 第 2 轮：仅搜索 follow_up 查询（避免重复第 1 轮），结果归属为空由 analyst 走 accepted_docs 回退
+            tagged: list[tuple[str, str]] = [(q, "") for q in follow_ups[:5]]
+        else:
+            # 展平：[(query, sub_question_id), ...] — 在展平时打标，保留归属
+            tagged = [
+                (q, sq.get("id", ""))
+                for sq in sub_questions
+                for q in sq.get("search_queries", [])
+            ]
+
+        async def _search_tagged(query: str, sq_id: str) -> list[dict[str, Any]]:
+            results = await search_service.search(query, max_results=settings.max_search_results)
+            return [{**r.model_dump(), "sub_question_id": sq_id} for r in results]
+
+        batches = await asyncio.gather(
+            *[_search_tagged(q, sq_id) for q, sq_id in tagged],
+            return_exceptions=True,
+        )
+        for i, batch in enumerate(batches):
+            if isinstance(batch, Exception):
+                logger.warning("搜索失败 [%s]: %s", tagged[i][0][:40], batch)
+                continue
+            all_results.extend(batch)
+
+        logger.info("并发搜索完成: %d 个查询，%d 条原始结果", len(tagged), len(all_results))
+    else:
+        # 兜底：sub_questions 为空时（如多轮补充研究传入 follow_up_queries）
+        queries = state.get("search_queries", [state["query"]])
+        results = await search_service.multi_search(
+            queries=queries,
+            max_results_per_query=settings.max_search_results,
+        )
+        all_results = [r.model_dump() for r in results]
+
+    # 全局 URL 去重，保留首次命中的 sub_question_id
+    seen_urls: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    for r in all_results:
+        if r["url"] not in seen_urls:
+            seen_urls.add(r["url"])
+            deduped.append(r)
+
+    # 收集 Tavily 摘要答案：每个 sq_id 取首条不重复 answer
+    summaries: list[dict[str, Any]] = []
+    seen_answers: set[str] = set()
+    for r in deduped:
+        answer = r.get("query_answer")
+        sq_id = r.get("sub_question_id", "")
+        if answer and answer not in seen_answers:
+            seen_answers.add(answer)
+            summaries.append({"sq_id": sq_id, "answer": answer})
+
+    n_raw = sum(1 for r in deduped if r.get("raw_content"))
     return {
-        "search_results": [r.model_dump() for r in results],
+        "search_results": deduped,
+        "search_summaries": summaries,
         "progress": 30,
-        "progress_message": f"搜索完成: {len(results)} 个结果",
+        "progress_message": (
+            f"搜索完成: {len(deduped)} 条结果，"
+            f"{n_raw} 条含 raw_content，{len(summaries)} 条摘要"
+        ),
     }
 
 
 async def content_extractor_node(state: ResearchState) -> dict[str, Any]:
-    """网页抓取节点 — 抓取并清洗网页内容。"""
+    """内容提取节点 — Tavily raw_content 直接使用，其余 URL 爬取补充。"""
     logger.info("Content Extractor 节点开始执行")
 
-    crawler = CrawlerService()
-    urls = [
-        r["url"] for r in state.get("search_results", [])
-        if r.get("url")
-    ]
+    search_results = state.get("search_results", [])[:settings.max_sources_per_round]
+    if not search_results:
+        return {"crawled_documents": [], "progress": 45, "progress_message": "没有可处理的搜索结果"}
 
-    # 限制抓取数量
-    max_urls = settings.max_sources_per_round
-    urls = urls[:max_urls]
+    documents: list[dict[str, Any]] = []
+    urls_to_crawl: list[str] = []
 
-    if not urls:
-        return {
-            "crawled_documents": [],
-            "progress": 40,
-            "progress_message": "没有可抓取的 URL",
-        }
+    for r in search_results:
+        raw = r.get("raw_content")
+        if raw:
+            # Tavily 已返回完整正文，无需 HTTP 请求
+            documents.append({
+                "url": r["url"],
+                "title": r.get("title", ""),
+                "content": raw,
+                "text_length": len(raw),
+                "fetch_time": 0.0,
+                "error": None,
+                "tavily_score": r.get("tavily_score"),
+            })
+        elif r.get("url"):
+            urls_to_crawl.append(r["url"])
 
-    documents = await crawler.batch_fetch(urls)
-    valid_docs = [doc for doc in documents if doc.content and not doc.error]
+    # 补充爬取没有 raw_content 的 URL（DuckDuckGo 结果或 Tavily 未返回正文的情况）
+    if urls_to_crawl:
+        crawler = CrawlerService()
+        crawled = await crawler.batch_fetch(urls_to_crawl)
+        documents.extend([doc.model_dump() for doc in crawled])
 
+    n_raw = len(search_results) - len(urls_to_crawl)
+    n_crawled = len(urls_to_crawl)
+    valid = sum(1 for d in documents if d.get("content") and not d.get("error"))
+
+    logger.info("内容提取完成: raw_content=%d, 爬取=%d, 有效=%d", n_raw, n_crawled, valid)
     return {
-        "crawled_documents": [doc.model_dump() for doc in documents],
+        "crawled_documents": documents,
         "progress": 45,
-        "progress_message": f"抓取完成: {len(valid_docs)}/{len(urls)} 个页面成功",
+        "progress_message": f"内容提取完成: {valid} 有效（{n_raw} 来自 Tavily，{n_crawled} 爬取）",
     }
 
 
@@ -228,25 +318,26 @@ async def source_evaluator_node(state: ResearchState) -> dict[str, Any]:
 
         content_length = len(doc.get("content", ""))
         title = doc.get("title", "")
+        tavily_score = doc.get("tavily_score")
 
-        # 评分逻辑
-        relevance = min(1.0, content_length / 3000) if content_length > 100 else 0.1
-        credibility = 0.7  # 基础分，后续可基于域名扩展
-        freshness = 0.8    # 基础分
-        final_score = relevance * 0.5 + credibility * 0.3 + freshness * 0.2
-
-        accepted = final_score > 0.3 and content_length > 50
+        if tavily_score is not None:
+            # Tavily 路径：直接使用查询相关度分数，阈值 0.5
+            final_score = round(tavily_score, 3)
+            accepted = final_score >= 0.5 and content_length > 50
+            reason = f"Tavily score={final_score}" if accepted else f"Tavily score 过低 ({final_score})"
+        else:
+            # DuckDuckGo 路径：内容长度代理
+            final_score = round(min(1.0, content_length / 3000), 3)
+            accepted = content_length > 300
+            reason = "内容充足" if accepted else f"内容过短 ({content_length} chars)"
 
         evaluated.append({
             "url": doc.get("url", ""),
             "title": title,
             "content_length": content_length,
-            "relevance_score": round(relevance, 2),
-            "credibility_score": round(credibility, 2),
-            "freshness_score": round(freshness, 2),
-            "final_score": round(final_score, 2),
+            "final_score": final_score,
             "accepted": accepted,
-            "reason": "通过评估" if accepted else f"评分过低 ({final_score:.2f})",
+            "reason": reason,
         })
 
     return {
@@ -307,6 +398,7 @@ async def _analyze_single_question(
     qdrant_ok: bool,
     accepted_docs: list[dict[str, Any]],
     task_id: str,
+    search_summaries: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """分析单个子问题（可并发调用）。"""
     import re
@@ -328,6 +420,13 @@ async def _analyze_single_question(
 
     # 2. 构建分析上下文
     context_material: list[str] = []
+
+    # 2a. Tavily 摘要答案（若有）作为首条参考，为 LLM 提供快速基线
+    if search_summaries:
+        sq_answers = [s["answer"] for s in search_summaries if s.get("sq_id") == qid]
+        if sq_answers:
+            bullets = "\n".join(f"- {a}" for a in sq_answers[:3])
+            context_material.append(f"[Tavily 搜索摘要]\n{bullets}")
 
     if rag_chunks:
         for i, chunk in enumerate(rag_chunks):
@@ -393,6 +492,7 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     task_id = state.get("task_id", "")
     crawled_docs = state.get("crawled_documents", [])
     evaluated = state.get("evaluated_sources", [])
+    search_summaries = state.get("search_summaries", [])
 
     accepted_urls = {e["url"] for e in evaluated if e.get("accepted")}
     accepted_docs = [d for d in crawled_docs if d.get("url") in accepted_urls]
@@ -417,6 +517,7 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
                 qdrant_ok=qdrant_ok,
                 accepted_docs=accepted_docs,
                 task_id=task_id,
+                search_summaries=search_summaries,
             )
 
     # 所有子问题并发执行，return_exceptions=True 保证单个失败不影响其他结果

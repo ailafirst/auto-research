@@ -181,6 +181,7 @@ async def _run_cli_research(question: str) -> None:
             "sub_questions": [],
             "search_queries": [],
             "search_results": [],
+            "search_summaries": [],
             "crawled_documents": [],
             "evaluated_sources": [],
             "evidence_chunks": [],

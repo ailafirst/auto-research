@@ -17,6 +17,10 @@ class SearchResult(BaseModel):
     position: int = 0
     sub_question_id: str | None = None
     retrieved_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    # Tavily 专属字段（DuckDuckGo 时均为 None）
+    raw_content: str | None = None       # 完整页面正文，可跳过爬虫
+    tavily_score: float | None = None    # 查询相关度 0-1
+    query_answer: str | None = None      # Tavily 对该次查询的摘要答案
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
@@ -35,6 +39,7 @@ class CrawledDocument(BaseModel):
     error: str | None = None
     published_at: str | None = None
     author: str | None = None
+    tavily_score: float | None = None    # 从 SearchResult 透传，用于 source_evaluator
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)

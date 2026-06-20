@@ -1,90 +1,186 @@
 # Planner 改进方案
 
-> 整理自开发讨论，涵盖已落地改动与待实现优化方向。
+> 记录 `planner_node` 及 `app/prompts/planner.md` 的完整改进历程，包括已落地实现与待实施优化方向。
 
 ---
 
 ## 一、已实施改动
 
-### 1.1 Prompt 重写（`app/prompts/planner.md`）
+### 1.1 规则降级方案移除
 
-| 维度 | 改前 | 改后 |
-|------|------|------|
-| 搜索词数量 | 未明确（实际 1-2 条） | 明确要求 **3-5 条** |
-| 搜索词语言 | 仅中文 | **中英文混合**（专业术语保留英文） |
-| 子问题字段 | `id, question, search_queries` | 新增 `priority`（优先级）、`angle`（研究角度） |
-| 角度覆盖 | 无 | 列出 9 个角度供选择，`comparison` 类型强制含对比角度 |
-| 问题类型 | 4 种 | 增加 `deep_analysis` |
+原始实现中存在 `_rule_based_plan()` 函数，当 LLM 不可用时降级使用固定模板生成研究计划。
 
-新增 JSON 字段：
+该函数已**完全移除**。当前 `planner_node` 强制走 LLM 路径。理由：
+
+- LLM 不可用时系统本就无法正常运行（`analyst`、`fact_checker`、`report_writer` 均需 LLM）
+- 规则降级产生的计划质量远低于 LLM，容易误导用户
+- 移除后逻辑更清晰，异常直接抛出而非静默降级
+
+---
+
+### 1.2 Prompt 重写（V2：两阶段分析生成）
+
+`app/prompts/planner.md` 从简单指令升级为**两阶段结构化 Prompt**：
+
+#### Phase 1 — 问题分析（Question Analysis）
+
+LLM 在生成子问题前，必须先完成四维分类：
+
+**① Intent（意图）— 5 类**
+
+| Intent | 含义 |
+|--------|------|
+| `quick_overview` | 入门定向，用户需要基础心智模型 |
+| `deep_investigation` | 单一主题，多角度并行深入分析 |
+| `comparison` | 多个具名对象，评估差异与权衡 |
+| `how_to` | 行动导向，需要可操作的步骤 |
+| `trend_tracking` | 领域全景，映射已有方向与格局 |
+
+**② Domain（领域）— 7 类**
+
+`technology` / `business` / `science` / `legal` / `education` / `policy` / `general`
+
+分类依据为"回答该问题**主要需要哪类知识**"，不仅看话题表面。
+
+**③ Research Depth（研究深度）— 自适应**
+
+| Depth | 触发条件 | 子问题数 | 搜索词/题 |
+|-------|----------|---------|---------|
+| `shallow` | `quick_overview` intent；入门级问题 | 2–3 | 2–3 |
+| `medium` | 标准问题；单域 `how_to` / `trend_tracking` | 4–5 | 3–4 |
+| `deep` | `deep_investigation` / `comparison`；跨域；多维并行问题 | 5–7 | 4–5 |
+
+**关键设计**：深度由 LLM 根据 intent 自主推断，不再依赖用户传入的 `search_depth` 参数硬控制。`search_depth` 参数仍通过 hint_block 传入，但仅作为**软偏好**参考。
+
+**④ Research Dimensions（研究维度）— 7 种**
+
+`conceptual` / `technical` / `comparative` / `practical` / `trend` / `critical` / `contextual`
+
+选 2–4 种指导子问题角度选取，部分 intent 有强制要求（如 `comparison` 必含 `comparative`）。
+
+#### Phase 1 输出（存入 `research_strategy`）
+
 ```json
 {
-  "id": "q1",
-  "priority": 1,
-  "angle": "核心机制与工作原理",
-  "question": "...",
-  "search_queries": ["中文词1", "中文词2", "English term"]
+  "intent": "trend_tracking",
+  "domain": "technology",
+  "depth": "medium",
+  "dimensions": ["technical", "trend"],
+  "reasoning": "One sentence explaining the classification decision."
 }
 ```
 
-### 1.2 规则降级方案增强（`_rule_based_plan`）
+Phase 1 结果存入 `state["research_strategy"]`，可在日志和 benchmark 中追踪。
 
-- 每个子问题从 2 条搜索词扩展到 **4 条**（含英文变体）
-- 新增 `priority` 和 `angle` 字段，与 LLM 路径输出对齐
-- `comparison` 类型总查询数从 12 条提升到 **24 条**
+#### Phase 2 — 研究计划生成
 
-### 1.3 Analyst 节点并发化（关联改动）
+基于 Phase 1 分析，按以下规则生成子问题：
 
-子问题分析从串行 `for` 循环改为 `asyncio.gather` 并发，Planner 生成的子问题越多，加速效果越显著：
+**领域专属角度库**（替代通用模板）
+
+| 领域 | 推荐角度 |
+|------|---------|
+| technology | 核心机制 · 主流实现/框架 · 性能与工程挑战 · 生态与工具链 · 演进趋势 |
+| business | 市场规模/格局 · 商业模式 · 竞争优劣势 · 用户分析 · 监管风险 |
+| science | 基础原理 · 实验证据 · 当前科学共识 · 开放问题 · 应用前景 |
+| legal | 法律依据 · 执法实践 · 合规要求 · 司法管辖差异 · 标志性判例 |
+| policy | 政策目标 · 关键措施 · 执行现状 · 国际比较 · 争议与挑战 |
+
+**子问题规则（关键约束）**
+
+- `comparison` intent：每个对比对象一个子问题 + 一个综合权衡子问题
+- `how_to` intent：子问题按"前提 → 核心步骤 → 验证"顺序排列
+- 搜索词：中英混合，技术术语保留英文，同一子问题内搜索词保持**语义多样性**（不只是换词）
+
+#### Phase 2 输出（存入 `research_plan` / `sub_questions`）
+
+```json
+{
+  "question_analysis": { ... },
+  "research_goal": "一句话研究目标（用户语言）",
+  "question_type": "兼容字段",
+  "sub_questions": [
+    {
+      "id": "q1",
+      "priority": 1,
+      "angle": "角度标签（用户语言）",
+      "question": "完整子问题句",
+      "search_queries": ["中文词A", "中文词B", "English term C"]
+    }
+  ]
+}
+```
+
+---
+
+### 1.3 用户偏好软注入（hint_block）
+
+`planner_node` 在 LLM 调用前，将用户参数作为**软偏好**拼入 user_message：
+
+```python
+# nodes.py — planner_node
+hints = state.get("user_hints") or {}
+hint_lines = []
+if hints.get("report_type"):
+    hint_lines.append(f"用户偏好报告类型: {hints['report_type']}")
+if hints.get("search_depth"):
+    hint_lines.append(f"用户偏好搜索深度: {hints['search_depth']}")
+hint_block = "用户可选偏好（仅供参考，可根据问题实际情况调整）：\n" + "\n".join(hint_lines)
+```
+
+`report_type=summary` 等参数通过自然语言注入，LLM 可在分析后选择是否遵从（而非硬编码覆盖 depth 逻辑）。
+
+---
+
+### 1.4 Analyst 节点并发化（关联改动）
+
+`analyst_node` 将子问题分析从串行 `for` 循环改为 `asyncio.gather` + `asyncio.Semaphore(5)` 并发：
 
 ```
-旧（串行）：N 个子问题 × 3s/次 LLM = N×3s
-新（并发）：max(各子问题耗时) ≈ 3-5s（受最慢一次决定）
+旧（串行）：N 个子问题 × LLM耗时/次 = N × T
+新（并发）：max(各子问题 LLM 耗时) ≈ T（受最慢一次决定）
 ```
+
+Planner 生成的子问题越多，加速效果越显著。`Semaphore(5)` 防止同时向 API 发出过多请求。
+
+---
+
+### 1.5 Benchmark 数据（Prompt V2 实测）
+
+| 任务 | Intent | Domain | Depth | 子问题数 | 搜索词数 |
+|------|--------|--------|-------|---------|---------|
+| LLM推理加速（景观问题） | trend_tracking | technology | medium | 4 | 12 |
+| Python vs Rust（对比问题） | comparison | technology | deep | 6 | 24 |
+| 量子计算基础（入门问题） | quick_overview | science | shallow | 3 | 8 |
+
+自适应深度结果与预期完全一致：景观 → medium、对比 → deep、入门 → shallow。
 
 ---
 
 ## 二、待实现优化方向
 
-### 方向 A：自适应规划深度 ⭐ 推荐优先
-
-**问题**：`search_depth`（basic/advanced）和 `report_type`（summary/deep/comparison）已作为参数传入，但 planner 完全忽略了它们。
-
-**方案**：
-
-| 参数组合 | 子问题数 | 搜索词/题 | 说明 |
-|---------|---------|---------|------|
-| `summary` | 2-3 | 2 条 | 快速概览，减少 LLM 调用 |
-| `deep`（默认） | 4-5 | 4 条 | 当前行为 |
-| `comparison` | N个对比对象+2 | 4-5 条 | 每个对比对象独立成题 |
-| `search_depth=basic` | -1 题 | -1 词 | 轻量模式 |
-
-**改动位置**：`planner_node`（传入 `state` 中已有 `report_type` 字段），`app/prompts/planner.md`（加入动态指令段）。
-
-**收益**：减少不必要的 LLM 调用和搜索次数，summary 场景速度提升约 40%。
-
----
-
 ### 方向 B：搜索词语义去重 ⭐ 推荐优先
 
-**问题**：Planner 生成 20-30 条搜索词后，其中存在大量语义重复：
+**问题**：Planner 生成 20–30 条搜索词后，其中存在大量语义重复：
+
 ```
 "LangGraph 概述" ≈ "LangGraph overview" ≈ "LangGraph 介绍"
 ```
+
 三条词触发三次搜索，但结果高度重叠。
 
 **方案**：在 `planner_node` 输出后、进入 `retriever_node` 前，对 `search_queries` 做向量相似度过滤：
 
 ```python
 # 伪代码
-embeddings = embed(search_queries)          # fastembed 本地模型
+embeddings = embed(search_queries)          # fastembed 本地模型（已有，无额外依赖）
 filtered = cosine_dedup(embeddings, threshold=0.85)
 state["search_queries"] = filtered
 ```
 
-**改动位置**：`planner_node` 尾部 或 新增 `query_dedup_node`（插在 planner 和 retriever 之间）。
+**改动位置**：`planner_node` 尾部，或新增 `query_dedup_node`（插入 planner 和 retriever 之间）。
 
-**收益**：预计减少搜索次数 30-50%，降低 DuckDuckGo/Tavily 调用频率，同时减少后续爬取和向量化压力。
+**收益**：预计减少搜索次数 30–50%，降低 Tavily/DDG 调用频率，减少下游爬取和向量化压力。
 
 ---
 
@@ -92,7 +188,7 @@ state["search_queries"] = filtered
 
 **问题**：当前 planner 只向 LLM 发一次请求，视角单一，可能遗漏某些维度。
 
-**方案**：并发发出 2-3 个不同角色的规划请求，然后合并去重：
+**方案**：并发发出 2–3 个不同角色的规划请求，然后合并去重：
 
 ```python
 perspectives = [
@@ -105,12 +201,10 @@ plans = await asyncio.gather(*[
     llm.chat(build_messages(perspective, query))
     for perspective in perspectives
 ])
-
-# 合并子问题，按覆盖度去重
 merged = merge_and_dedup(plans)
 ```
 
-**收益**：研究覆盖面更广，报告质量提升；由于并发执行，**时延与单次规划相同**，代价是 3 倍 token 消耗。
+**收益**：研究覆盖面更广；由于并发执行，**时延与单次规划相同**，代价是 3 倍 token 消耗。
 
 **改动位置**：`planner_node`，需新增 `merge_plans()` 合并逻辑。
 
@@ -118,11 +212,9 @@ merged = merge_and_dedup(plans)
 
 ### 方向 D：多轮感知规划
 
-**问题**：当前第 2 轮研究直接用 `follow_up_queries` 跳过 planner，重走 retriever，planner 不知道第 1 轮已经发现了什么，导致：
-- 可能重复搜索已有答案的问题
-- 无法针对性地补充特定缺口
+**问题**：当前第 2 轮研究直接用 `follow_up_queries` 跳过 planner，planner 不知道第 1 轮已发现了什么，导致重复搜索已有答案的问题，无法针对性补充缺口。
 
-**方案**：在 round ≥ 2 时，让 planner 读取上一轮的 `fact_check_result.issues` 和 `sub_answers`，生成**针对性补充计划**：
+**方案**：round ≥ 2 时让 planner 读取上一轮的 `fact_check_result.issues` 和 `sub_answers`，生成**针对性补充计划**：
 
 ```python
 if state["current_round"] > 1:
@@ -136,56 +228,35 @@ else:
     prompt = build_initial_plan_prompt(query)
 ```
 
-**收益**：多轮研究质量显著提升，补充搜索更有针对性，减少无效重复。
-
 **改动位置**：`planner_node`（判断 round）、`app/prompts/` 新增 `planner_followup.md`。
 
 ---
 
-### 方向 E：领域自动识别与专化角度
+### 方向 E：领域专化细化（长期）
 
-**问题**：通用角度模板（背景/机制/现状/风险/趋势）对不同领域效果不同，医疗类需要"临床证据"，金融类需要"监管政策"，技术类需要"性能基准"。
-
-**方案**：在 planner 中增加一步轻量领域分类，然后注入领域专属角度：
-
-```python
-DOMAIN_ANGLES = {
-    "technology": ["开源生态", "性能基准", "社区活跃度", "API 设计"],
-    "finance":    ["监管政策", "风险敞口", "市场规模", "合规要求"],
-    "medical":    ["临床证据级别", "副作用", "适应症", "指南推荐"],
-    "legal":      ["法律依据", "司法实践", "争议焦点", "地区差异"],
-}
-```
-
-**收益**：领域专业度提升，减少通用模板的"废话"子问题。
-
-**改动位置**：`planner_node` 增加领域检测逻辑，`app/prompts/planner.md` 增加条件角度块。
+Phase 1 的 domain 分类已提供领域识别基础，Phase 2 已有各领域角度库。可在此基础上注入更细粒度的子领域专属角度（如医疗、金融、半导体），当前方案对通用领域已够用。
 
 ---
 
 ### 方向 F：规划反思（Reflection Loop）
 
-**问题**：planner 生成计划后直接执行，无验证环节。若 retriever 返回结果与预期严重偏差，整轮研究可能方向错误。
-
-**方案**：retriever 完成后，插入轻量 LLM 调用评估"搜索结果与研究计划的覆盖匹配度"：
+**方案**：retriever 完成后，插入轻量 LLM 评估"搜索结果与研究计划覆盖匹配度"：
 
 ```
 planner → retriever → [reflection] → （匹配度低 → re-plan） → content_extractor → ...
 ```
 
-**收益**：减少因规划不准导致的整轮无效研究。
-
-**代价**：增加 1 次 LLM 调用延迟（约 2-3s），且需要修改 LangGraph 图结构加入条件边。
+**代价**：增加 1 次 LLM 调用延迟（约 2–3s），且需修改 LangGraph 图结构加入条件边。
 
 ---
 
 ## 三、优先级建议
 
-| 优先级 | 方向 | 理由 |
-|--------|------|------|
-| ★★★ 立即做 | A 自适应深度 | 改动小，参数已有，收益直接 |
-| ★★★ 立即做 | B 搜索词去重 | 减少下游压力，无需新 LLM 调用 |
-| ★★☆ 下一迭代 | C 多视角并行规划 | 质量提升最显著，token 成本增加 |
-| ★★☆ 下一迭代 | D 多轮感知规划 | 改善多轮研究的核心痛点 |
-| ★☆☆ 长期 | E 领域专化 | 需要维护领域知识库，成本较高 |
-| ★☆☆ 长期 | F 反思循环 | 需修改 LangGraph 图结构，复杂度高 |
+| 优先级 | 方向 | 状态 | 理由 |
+|--------|------|------|------|
+| ✅ 已完成 | A 自适应深度 | 已内化进 Prompt V2 | LLM 自主推断，无需外部参数驱动 |
+| ★★★ 立即做 | B 搜索词去重 | 待实现 | 减少下游压力，复用已有 fastembed，无新依赖 |
+| ★★☆ 下一迭代 | C 多视角并行规划 | 待实现 | 质量提升显著，token 成本增加 3× |
+| ★★☆ 下一迭代 | D 多轮感知规划 | 待实现 | 改善多轮研究核心痛点 |
+| ★☆☆ 长期 | E 领域专化细化 | 待实现 | 当前 angle bank 已有基础，细化收益递减 |
+| ★☆☆ 长期 | F 反思循环 | 待实现 | 需修改 LangGraph 图结构，复杂度高 |

@@ -123,6 +123,7 @@ async def _run_research(task_id: str) -> None:
                 "sub_questions": [],
                 "search_queries": [],
                 "search_results": [],
+                "search_summaries": [],
                 "crawled_documents": [],
                 "evaluated_sources": [],
                 "evidence_chunks": [],
@@ -187,8 +188,13 @@ async def _run_research(task_id: str) -> None:
             )
 
             new_state = _build_state(current_round, {
-                "search_queries": follow_up[:5],
-                "search_results": [],
+                "sub_questions":     final_state.get("sub_questions", []),
+                "research_plan":     final_state.get("research_plan", {}),
+                "research_strategy": final_state.get("research_strategy", {}),
+                "follow_up_queries": follow_up,
+                "search_queries":    follow_up[:5],
+                "search_results":    [],
+                "search_summaries":  [],
                 "crawled_documents": [],
                 "evaluated_sources": [],
             })

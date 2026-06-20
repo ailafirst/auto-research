@@ -54,6 +54,7 @@ def _build_state(query: str, language: str) -> dict:
         "sub_questions":     [],
         "search_queries":    [],
         "search_results":    [],
+        "search_summaries":  [],
         "crawled_documents": [],
         "evaluated_sources": [],
         "evidence_chunks":   [],
@@ -111,7 +112,8 @@ def print_planner_output(query: str, output: dict, elapsed: float) -> None:
             print(f"       {_d('›')} {q}")
         print()
 
-    print(f"  {_d(f'耗时 {elapsed:.1f}s · 搜索词共 {len(output.get(\"search_queries\", []))} 条')}")
+    n_queries = len(output.get("search_queries", []))
+    print(f"  {_d(f'耗时 {elapsed:.1f}s · 搜索词共 {n_queries} 条')}")
 
 
 async def run_query(query: str, language: str) -> None:
