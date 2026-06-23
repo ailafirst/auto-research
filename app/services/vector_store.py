@@ -120,9 +120,10 @@ class VectorStoreService:
             )
 
         try:
-            results = await self.client.search(
+            # qdrant-client >= 1.7 removed search(), use query_points() instead
+            response = await self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=k,
                 query_filter=query_filter,
                 with_payload=True,
@@ -137,7 +138,7 @@ class VectorStoreService:
                     "chunk_index": r.payload.get("chunk_index", 0),
                     "source_id": r.payload.get("source_id", ""),
                 }
-                for r in results
+                for r in response.points
             ]
 
         except Exception as exc:

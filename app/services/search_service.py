@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+from pathlib import Path
 from typing import Any
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -17,6 +19,67 @@ logger = logging.getLogger(__name__)
 
 class TavilyRateLimitError(Exception):
     """Tavily 限速错误 — 可被 tenacity 捕获并按指数退避重试。"""
+
+
+class TavilyQuotaError(Exception):
+    """Tavily 配额耗尽 — 需要切换到下一个 API key。"""
+
+
+def _load_tavily_keys() -> list[str]:
+    """从项目根目录 tavily.txt 加载 API key 列表。"""
+    key_file = Path(__file__).parent.parent.parent / "tavily.txt"
+    if not key_file.exists():
+        return []
+    keys: list[str] = []
+    for line in key_file.read_text(encoding="utf-8").splitlines():
+        m = re.search(r"(tvly-\S+)", line.strip())
+        if m:
+            keys.append(m.group(1))
+    return keys
+
+
+class TavilyKeyPool:
+    """Tavily API key 顺序轮换池 — 额度耗尽时切换到下一个 key。"""
+
+    def __init__(self, keys: list[str]) -> None:
+        self._keys = keys
+        self._idx = 0
+        if keys:
+            logger.info("Tavily key pool 已加载 %d 个 key", len(keys))
+
+    @property
+    def current_key(self) -> str | None:
+        return self._keys[self._idx] if self._idx < len(self._keys) else None
+
+    @property
+    def current_idx(self) -> int:
+        return self._idx
+
+    def rotate(self, from_idx: int) -> str | None:
+        """将 from_idx 处的 key 标记为耗尽并切换到下一个。
+        若 _idx 已超过 from_idx（并发场景下其他协程已先轮换），则幂等跳过。
+        """
+        if self._idx != from_idx:
+            return self.current_key
+        self._idx += 1
+        if self._idx < len(self._keys):
+            logger.warning(
+                "Tavily key %d 额度耗尽，切换至 key %d/%d",
+                from_idx + 1, self._idx + 1, len(self._keys),
+            )
+            return self._keys[self._idx]
+        logger.error("Tavily 所有 %d 个 key 额度已耗尽", len(self._keys))
+        return None
+
+
+_key_pool: TavilyKeyPool | None = None
+
+
+def _get_key_pool() -> TavilyKeyPool:
+    global _key_pool
+    if _key_pool is None:
+        _key_pool = TavilyKeyPool(_load_tavily_keys())
+    return _key_pool
 
 
 class BaseSearchProvider:
@@ -69,20 +132,28 @@ class DuckDuckGoProvider(BaseSearchProvider):
 
 _tavily_semaphore = asyncio.Semaphore(3)   # 限制 Tavily 全局并发，避免 dev key 限速
 
+# 配额耗尽关键词（"exceeds your plan's usage limit" 等）
+_QUOTA_KEYWORDS = ("exceed", "quota", "usage limit", "plan limit", "credits")
+# 限速关键词（临时 429，同一 key 重试即可）
+_RATE_KEYWORDS = ("rate", "blocked", "429", "too many", "excessive")
+
 
 class TavilyProvider(BaseSearchProvider):
-    """Tavily Search API 搜索。"""
+    """Tavily Search API 搜索，支持多 key 顺序轮换。"""
 
     async def search(self, query: str, max_results: int = 5) -> list[SearchResult]:
-        if not settings.tavily_api_key:
-            logger.warning("Tavily API Key 未配置")
+        pool = _get_key_pool()
+        # 优先用 pool 中的 key，pool 为空时回退到 .env 中的单 key
+        api_key = pool.current_key or settings.tavily_api_key
+        if not api_key:
+            logger.warning("Tavily API Key 未配置（tavily.txt 和 .env 均无有效 key）")
             return []
 
         async with _tavily_semaphore:
             try:
                 from tavily import AsyncTavilyClient
 
-                client = AsyncTavilyClient(api_key=settings.tavily_api_key)
+                client = AsyncTavilyClient(api_key=api_key)
                 response = await client.search(
                     query=query,
                     max_results=max_results,
@@ -108,10 +179,11 @@ class TavilyProvider(BaseSearchProvider):
                 return results
 
             except Exception as exc:
-                msg = str(exc)
-                # 限速错误上抛，让 tenacity 按指数退避重试
-                if any(k in msg.lower() for k in ("excessive", "rate", "blocked", "429", "too many")):
-                    raise TavilyRateLimitError(msg) from exc
+                msg = str(exc).lower()
+                if any(k in msg for k in _QUOTA_KEYWORDS):
+                    raise TavilyQuotaError(str(exc)) from exc
+                if any(k in msg for k in _RATE_KEYWORDS):
+                    raise TavilyRateLimitError(str(exc)) from exc
                 logger.error("Tavily 搜索失败: %s", exc)
                 return []
             finally:
@@ -144,16 +216,29 @@ class SearchService:
         return await self.provider.search(query, max_results=max_results)
 
     async def search(self, query: str, max_results: int | None = None) -> list[SearchResult]:
-        """执行单次搜索，失败或零结果时自动降级到 DuckDuckGo。"""
+        """执行单次搜索，限速时重试，额度耗尽时轮换 key，最终失败降级 DuckDuckGo。"""
         n_results = max_results or settings.max_search_results
+        pool = _get_key_pool()
 
-        try:
-            results = await self._primary_search(query, n_results)
-        except TavilyRateLimitError:
-            logger.warning("Tavily 限速重试耗尽，降级 DDG: query='%s'", query[:50])
-            results = []
+        results: list[SearchResult] = []
+        # 最多尝试所有可用 key 次数
+        max_key_attempts = len(pool._keys) + 1
+        for _ in range(max_key_attempts):
+            try:
+                results = await self._primary_search(query, n_results)
+                break
+            except TavilyRateLimitError:
+                logger.warning("Tavily 限速重试耗尽，降级 DDG: query='%s'", query[:50])
+                break
+            except TavilyQuotaError:
+                used_idx = pool.current_idx
+                new_key = pool.rotate(used_idx)
+                if new_key is None:
+                    logger.warning("Tavily 所有 key 耗尽，降级 DDG: query='%s'", query[:50])
+                    break
+                # 继续循环，TavilyProvider.search() 下次调用会取 pool.current_key
 
-        # 零结果降级：Tavily 返回空（限速耗尽 or 真实无结果）→ DuckDuckGo 补充
+        # 零结果降级：Tavily 返回空 → DuckDuckGo 补充
         if not results and self._current_provider == "tavily":
             logger.warning("Tavily 零结果，DDG 降级: query='%s'", query[:50])
             results = await self.providers["duckduckgo"].search(query, max_results=n_results)

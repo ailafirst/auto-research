@@ -35,3 +35,6 @@ coverage/
 tests/data/
 
 benchmark/results/
+
+# API Key 文件
+tavily.txt

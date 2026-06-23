@@ -40,6 +40,9 @@ class ResearchState(TypedDict):
     # RAG 证据
     evidence_chunks: list[dict[str, Any]]
 
+    # 全局引用注册表（由 analyst_node 构建，格式 [{id, title, url}]）
+    citation_registry: list[dict[str, Any]]
+
     # 分析结果
     sub_answers: list[dict[str, Any]]
 

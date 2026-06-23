@@ -43,7 +43,7 @@ class LLMService:
     )
     async def chat(
         self,
-        messages: list[dict[str, str]],
+        messages: list[dict[str, Any]],
         temperature: float | None = None,
         max_tokens: int | None = None,
         response_format: dict[str, str] | None = None,
