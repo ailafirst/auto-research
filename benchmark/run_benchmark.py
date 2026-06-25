@@ -105,6 +105,10 @@ async def run_single(
     if report_path.exists():
         persisted = json.loads(report_path.read_text(encoding="utf-8"))
 
+    fact_check = persisted.get("fact_check_result") or {}
+    fc_issues: list[dict] = fact_check.get("issues", [])
+    fc_passed: bool = fact_check.get("passed", True)
+
     result = {
         "benchmark_task_id": task["id"],
         "benchmark_task_name": task["name"],
@@ -121,11 +125,14 @@ async def run_single(
         "progress": final_status.get("progress", 0),
         "final_report": persisted.get("final_report", ""),
         "report_length": len(persisted.get("final_report", "")),
+        "fact_check_passed": fc_passed,
+        "fact_check_issues": fc_issues,
         "run_at": datetime.now().isoformat(),
     }
 
     status_str = "OK 完成" if result["status"] == "completed" else "NG 失败"
-    print(f"  {status_str}  耗时 {elapsed:.0f}s  报告长度 {result['report_length']} 字符")
+    fc_str = f"核查{'通过' if fc_passed else '未通过'} issues={len(fc_issues)}"
+    print(f"  {status_str}  耗时 {elapsed:.0f}s  报告长度 {result['report_length']} 字符  {fc_str}")
 
     return result
 
@@ -178,19 +185,37 @@ async def main(task_ids: list[str], api: str) -> None:
                 })
 
     # 打印摘要
-    print(f"\n{'=' * 60}")
+    print(f"\n{'=' * 70}")
     print("基准测试摘要")
-    print(f"{'=' * 60}")
-    print(f"{'ID':>4}  {'名称':<24}  {'状态':<8}  {'耗时':>8}  {'报告长度':>10}")
-    print("-" * 60)
+    print(f"{'=' * 70}")
+    print(f"{'ID':>4}  {'名称':<24}  {'状态':<6}  {'耗时':>6}  {'报告':>6}  {'核查':<6}  {'issues':>6}")
+    print("-" * 70)
     for r in summary:
         status = "OK" if r.get("status") == "completed" else "NG"
         elapsed = f"{r.get('elapsed_seconds', 0):.0f}s" if "elapsed_seconds" in r else "-"
         length = str(r.get("report_length", "-"))
-        print(f"{r['benchmark_task_id']:>4}  {r['benchmark_task_name']:<24}  {status:<8}  {elapsed:>8}  {length:>10}")
+        fc = "通过" if r.get("fact_check_passed", True) else "未通过"
+        n_issues = len(r.get("fact_check_issues", []))
+        print(f"{r['benchmark_task_id']:>4}  {r['benchmark_task_name']:<24}  {status:<6}  {elapsed:>6}  {length:>6}  {fc:<6}  {n_issues:>6}")
 
     done = sum(1 for r in summary if r.get("status") == "completed")
     print(f"\n完成: {done}/{len(summary)}")
+
+    # issue 类型分布统计
+    all_issues = [i for r in summary for i in r.get("fact_check_issues", [])]
+    if all_issues:
+        from collections import Counter
+        dist = Counter(i.get("type", "unknown") for i in all_issues)
+        total = len(all_issues)
+        print(f"\nFact Checker Issue 分布（共 {total} 条，来自 {len(summary)} 个任务）:")
+        print(f"{'类型':<30}  {'数量':>6}  {'占比':>6}")
+        print("-" * 46)
+        for itype, cnt in dist.most_common():
+            print(f"{itype:<30}  {cnt:>6}  {cnt*100//total:>5}%")
+        failed = sum(1 for r in summary if not r.get("fact_check_passed", True))
+        print(f"\n核查未通过任务: {failed}/{len(summary)}")
+    else:
+        print("\nFact Checker: 所有任务均无 issue（或未记录）")
 
 
 if __name__ == "__main__":

@@ -50,6 +50,9 @@ class ResearchState(TypedDict):
     fact_check_result: dict[str, Any]
     fact_check_passed: bool
     follow_up_queries: list[str]
+    # citation_mismatch 引用修正（fact_checker → analyst retry）
+    citation_mismatches: list[dict[str, Any]]   # [{sub_question_id, issues}]
+    analyst_revision_done: bool
 
     # 报告
     final_report: str

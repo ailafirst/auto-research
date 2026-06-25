@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -11,6 +12,13 @@ from app.core.config import settings
 from app.core.exceptions import LLMServiceError
 
 logger = logging.getLogger(__name__)
+
+# 进程级全局 LLM 并发闸门：所有经 LLMService.chat() 的调用（planner / analyst /
+# fact_checker / report_writer）都在此排队。节点级局部信号量只约束单次节点调用，
+# 跨任务并发时本闸门才是真正上限，防止 N 任务 × 5 把 API 打到限速。
+# 仅在真正发起网络请求时占用槽位，tenacity 退避 sleep 期间不占（见 chat()）。
+# 注：RAGAS 走 ragas 自身的 LLM 客户端、不经此服务，故本闸门不影响 benchmark+ragas。
+_llm_semaphore = asyncio.Semaphore(settings.llm_max_concurrency)
 
 
 class LLMService:
@@ -46,7 +54,7 @@ class LLMService:
         messages: list[dict[str, Any]],
         temperature: float | None = None,
         max_tokens: int | None = None,
-        response_format: dict[str, str] | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> str:
         """调用 LLM 进行对话。"""
         try:
@@ -66,7 +74,10 @@ class LLMService:
             if response_format:
                 kwargs["response_format"] = response_format
 
-            response = await litellm.acompletion(**kwargs, timeout=120)
+            # 全局闸门只裹住网络调用；失败重试由 @retry 在 async with 外侧驱动，
+            # 故退避 sleep 时不占用并发槽位。
+            async with _llm_semaphore:
+                response = await litellm.acompletion(**kwargs, timeout=120)
             content = response.choices[0].message.content or ""
 
             # Token 统计

@@ -184,7 +184,9 @@ async def run_task(task: dict) -> None:
         source_evaluator_node,
     )
     import app.graph.nodes as _nodes
-    _nodes._ANALYST_LLM_CONCURRENCY = 1  # 单任务测试，不需要并发
+    from app.core.config import settings as _s
+    print(f"  [并发配置] analyst={_s.analyst_concurrency}  fact_checker={_s.fact_checker_concurrency}"
+          f"  llm_global={_s.llm_max_concurrency}", flush=True)
 
     from datetime import datetime
     now = datetime.now().isoformat()
@@ -307,6 +309,25 @@ async def run_task(task: dict) -> None:
                   f"{round(sum(others)/len(others)):,}" if others else "")
 
 
+async def _warmup_models() -> None:
+    """进程启动时预热 embedding / reranker 模型。
+    消除 evidence_builder 和 analyst 节点的首次冷启动延迟（bge-m3 约 20-30s，
+    bge-reranker 约 5-10s），使节点耗时只反映实际计算，不含模型加载。
+    """
+    from app.services.rag_service import get_rag_service, _get_reranker
+    from app.core.config import settings as _s
+    t0 = time.perf_counter()
+    print(f"  {_d('预热模型中...')}", flush=True)
+    rag = get_rag_service()
+    if _s.embedding_provider == "st":
+        await rag._get_st_model()
+    elif _s.embedding_provider == "fastembed":
+        await rag._get_fastembed_model()
+    if _s.reranker_enabled:
+        await _get_reranker()
+    print(f"  {_d(f'模型预热完成（{time.perf_counter()-t0:.1f}s）')}", flush=True)
+
+
 async def main(task_id: str, node_limits: str) -> None:
     # 解析节点限制（如 "analyst:800" 或 "analyst:800,report_writer:1500"）
     if node_limits:
@@ -320,6 +341,7 @@ async def main(task_id: str, node_limits: str) -> None:
                     print(f"[警告] 格式错误，忽略: {pair}", file=sys.stderr)
 
     _patch_llm()
+    await _warmup_models()
 
     all_tasks = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
     task = next((t for t in all_tasks if t["id"] == task_id), None)

@@ -38,3 +38,6 @@ benchmark/results/
 
 # API Key 文件
 tavily.txt
+
+# Claude Code
+CLAUDE.md

@@ -50,6 +50,23 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Qdrant 连接检查失败: %s", exc)
 
+    # 预热 embedding / reranker 模型
+    # 首次加载 bge-m3 约 20-30s，bge-reranker 约 5-10s；在 lifespan 里提前加载，
+    # 使第一个真实研究请求的 evidence_builder 和 analyst 节点不需要等待模型冷启动。
+    try:
+        from app.services.rag_service import get_rag_service, _get_reranker
+        rag = get_rag_service()
+        if settings.embedding_provider == "st":
+            await rag._get_st_model()
+        elif settings.embedding_provider == "fastembed":
+            await rag._get_fastembed_model()
+        logger.info("Embedding 模型预热完成: %s", settings.embedding_model)
+        if settings.reranker_enabled:
+            await _get_reranker()
+            logger.info("Reranker 模型预热完成: %s", settings.reranker_model)
+    except Exception as exc:
+        logger.warning("模型预热失败（不影响启动）: %s", exc)
+
     yield
 
     logger.info("Deep Research Agent 关闭")
@@ -197,9 +214,6 @@ async def _run_cli_research(question: str) -> None:
             "updated_at": "",
         }
 
-        final_state = await research_graph.ainvoke(initial_state)
-
-        # 更新进度
         final_state = await research_graph.ainvoke(initial_state)
 
         def _update_progress(state: dict) -> None:

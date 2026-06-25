@@ -25,6 +25,7 @@ class ResearchTask(BaseModel):
     # 执行结果
     research_plan: dict[str, Any] | None = None
     final_report: str | None = None
+    fact_check_result: dict[str, Any] | None = None
     error_message: str | None = None
 
     # 元数据

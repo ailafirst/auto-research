@@ -18,11 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 class TavilyRateLimitError(Exception):
-    """Tavily 限速错误 — 可被 tenacity 捕获并按指数退避重试。"""
+    """Tavily 限速错误（429）— 可被 tenacity 捕获并按指数退避重试。"""
 
 
 class TavilyQuotaError(Exception):
-    """Tavily 配额耗尽 — 需要切换到下一个 API key。"""
+    """Tavily key 失效或月配额耗尽（432/403/401）— 需要切换到下一个 key。"""
+
+    def __init__(self, msg: str, key_idx: int = 0) -> None:
+        super().__init__(msg)
+        self.key_idx = key_idx
 
 
 def _load_tavily_keys() -> list[str]:
@@ -132,18 +136,16 @@ class DuckDuckGoProvider(BaseSearchProvider):
 
 _tavily_semaphore = asyncio.Semaphore(3)   # 限制 Tavily 全局并发，避免 dev key 限速
 
-# 配额耗尽关键词（"exceeds your plan's usage limit" 等）
-_QUOTA_KEYWORDS = ("exceed", "quota", "usage limit", "plan limit", "credits")
-# 限速关键词（临时 429，同一 key 重试即可）
-_RATE_KEYWORDS = ("rate", "blocked", "429", "too many", "excessive")
-
 
 class TavilyProvider(BaseSearchProvider):
     """Tavily Search API 搜索，支持多 key 顺序轮换。"""
 
     async def search(self, query: str, max_results: int = 5) -> list[SearchResult]:
         pool = _get_key_pool()
-        # 优先用 pool 中的 key，pool 为空时回退到 .env 中的单 key
+        # 在进入 semaphore 前记录本次请求使用的 key index，随错误一起传出
+        # 这样多个并发任务失败时，rotate(key_idx) 都用同一个 from_idx，
+        # 幂等检查生效，只发生一次真正的轮换，避免级联耗尽所有 key。
+        key_idx = pool.current_idx
         api_key = pool.current_key or settings.tavily_api_key
         if not api_key:
             logger.warning("Tavily API Key 未配置（tavily.txt 和 .env 均无有效 key）")
@@ -157,8 +159,8 @@ class TavilyProvider(BaseSearchProvider):
                 response = await client.search(
                     query=query,
                     max_results=max_results,
-                    search_depth="advanced",
-                    include_raw_content=True,
+                    search_depth=settings.tavily_search_depth,
+                    include_raw_content=settings.tavily_include_raw_content,
                     include_answer=True,
                 )
 
@@ -179,16 +181,24 @@ class TavilyProvider(BaseSearchProvider):
                 return results
 
             except Exception as exc:
-                msg = str(exc).lower()
-                if any(k in msg for k in _QUOTA_KEYWORDS):
-                    raise TavilyQuotaError(str(exc)) from exc
-                if any(k in msg for k in _RATE_KEYWORDS):
+                # Tavily 库的异常映射：
+                #   429 → UsageLimitExceededError（限速，应重试）
+                #   432/403 → ForbiddenError（key 失效或月配额耗尽，应换 key）
+                #   401 → InvalidAPIKeyError（key 无效，应换 key）
+                from tavily.errors import (
+                    ForbiddenError as _TForbidden,
+                    InvalidAPIKeyError as _TInvalidKey,
+                    UsageLimitExceededError as _TUsageLimit,
+                )
+                if isinstance(exc, _TUsageLimit):
                     raise TavilyRateLimitError(str(exc)) from exc
+                if isinstance(exc, (_TForbidden, _TInvalidKey)):
+                    raise TavilyQuotaError(str(exc), key_idx) from exc
                 logger.error("Tavily 搜索失败: %s", exc)
                 return []
             finally:
-                # 每次请求后短暂释放，避免连续触发限速
-                await asyncio.sleep(0.3)
+                # 每次请求后短暂等待，避免连续触发限速
+                await asyncio.sleep(0.5)
 
 
 class SearchService:
@@ -230,9 +240,10 @@ class SearchService:
             except TavilyRateLimitError:
                 logger.warning("Tavily 限速重试耗尽，降级 DDG: query='%s'", query[:50])
                 break
-            except TavilyQuotaError:
-                used_idx = pool.current_idx
-                new_key = pool.rotate(used_idx)
+            except TavilyQuotaError as exc:
+                # 用 exc.key_idx（请求发出时的 index），而非 pool.current_idx，
+                # 确保并发场景下多个任务失败只触发一次真正的轮换。
+                new_key = pool.rotate(exc.key_idx)
                 if new_key is None:
                     logger.warning("Tavily 所有 key 耗尽，降级 DDG: query='%s'", query[:50])
                     break
@@ -246,6 +257,47 @@ class SearchService:
         engine = self._current_provider if results else "duckduckgo(fallback)"
         logger.info("搜索完成 [%s]: query='%s', results=%d", engine, query[:50], len(results))
         return results
+
+    async def probe_key_pool(self) -> None:
+        """发 1 次轻量探针确认当前 Tavily key 可用；quota 耗尽则提前 rotate。
+
+        在批量搜索前调用，消除 N 个并发请求同时撞到耗尽 key 时的级联串行重试。
+        探针固定用 basic + 无 raw_content，不消耗 advanced credit。
+        """
+        if self._current_provider != "tavily":
+            return
+        pool = _get_key_pool()
+        for _ in range(len(pool._keys) + 1):
+            key_idx = pool.current_idx
+            api_key = pool.current_key
+            if not api_key:
+                logger.warning("Tavily key probe: 所有 key 已耗尽")
+                return
+            try:
+                from tavily import AsyncTavilyClient
+                client = AsyncTavilyClient(api_key=api_key)
+                await client.search(
+                    "probe",
+                    max_results=1,
+                    search_depth="basic",
+                    include_raw_content=False,
+                    include_answer=False,
+                )
+                logger.info("Tavily key probe 通过: key %d/%d 可用", key_idx + 1, len(pool._keys))
+                return
+            except Exception as exc:
+                try:
+                    from tavily.errors import ForbiddenError as _F, InvalidAPIKeyError as _I
+                    if isinstance(exc, (_F, _I)):
+                        new_key = pool.rotate(key_idx)
+                        if new_key is None:
+                            return
+                        continue
+                except ImportError:
+                    pass
+                # 非 quota 错误（网络抖动/限速）—— 保留当前 key，让后续请求正常重试
+                logger.warning("Tavily key probe 失败（非 quota 错误，保留当前 key）: %s", exc)
+                return
 
     async def multi_search(
         self,

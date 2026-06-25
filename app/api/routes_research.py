@@ -131,6 +131,8 @@ async def _run_research(task_id: str) -> None:
                 "fact_check_result": {},
                 "fact_check_passed": True,
                 "follow_up_queries": [],
+                "citation_mismatches": [],
+                "analyst_revision_done": False,
                 "final_report": "",
                 "errors": [],
                 "progress": 0,
@@ -164,9 +166,44 @@ async def _run_research(task_id: str) -> None:
                     )
             return final_state
 
+        async def _revise_citations(state: dict) -> dict:
+            """如有 citation_mismatch 且无严重 issue，针对受影响子问题重跑 analyst → fact_checker（验证）→ report_writer。
+            当 fact_check_passed=False 时说明存在严重 issue，即将触发补充搜索，跳过修正避免浪费。"""
+            if not state.get("citation_mismatches") or state.get("analyst_revision_done"):
+                return state
+            if not state.get("fact_check_passed", True):
+                # Serious issues present — supplement search round will run next; skip citation revision
+                return state
+            from app.graph.nodes import analyst_node, fact_checker_node, report_writer_node
+            n = len(state["citation_mismatches"])
+            await task_service.update_task(
+                task_id, status="analyst", progress=72,
+                progress_message=f"修正 {n} 处引用错误...",
+            )
+            # analyst_revision_done=True is passed INTO analyst so the node can skip
+            # non-mismatch sub-questions; we also set it explicitly in the merged state
+            # so _revise_citations won't be called again for the same round.
+            revised = await analyst_node({**state, "analyst_revision_done": True})
+            state = {**state, **revised, "analyst_revision_done": True}
+
+            await task_service.update_task(
+                task_id, status="fact_checker", progress=82,
+                progress_message="验证引用修正结果...",
+            )
+            fc = await fact_checker_node(state)
+            state = {**state, **fc}
+
+            await task_service.update_task(
+                task_id, status="report_writer", progress=88,
+                progress_message="重新生成修订报告...",
+            )
+            rw = await report_writer_node(state)
+            return {**state, **rw}
+
         # 第一轮研究
         initial_state = _build_state(1)
         final_state = await _run_round(initial_state)
+        final_state = await _revise_citations(final_state)
 
         # 多轮补充研究
         current_round = 1
@@ -199,6 +236,7 @@ async def _run_research(task_id: str) -> None:
                 "evaluated_sources": [],
             })
             final_state = await _run_round(new_state)
+            final_state = await _revise_citations(final_state)
 
         # 更新任务结果为完成
         report = final_state.get("final_report", "")
@@ -208,6 +246,7 @@ async def _run_research(task_id: str) -> None:
             progress=100,
             progress_message="研究完成",
             final_report=report,
+            fact_check_result=final_state.get("fact_check_result") or {},
         )
 
         logger.info("研究任务完成: task_id=%s, 轮数=%d", task_id, current_round)

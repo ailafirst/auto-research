@@ -397,6 +397,7 @@ async def run_task(task: dict) -> dict:
             "passed":      fc.get("passed", True),
             "n_issues":    len(issues),
             "n_follow_up": len(follow_up),
+            "issues":      issues,   # 完整列表，用于统计 type 分布
         },
         "report_writer": {
             "report_len":  report_len,
@@ -604,6 +605,70 @@ def _print_summary(results: list[dict], all_tasks: list[dict]) -> None:
     print(f"\n  共 {len(results)} 个任务" + (f"，{_y(str(errors) + ' 个错误')}" if errors else ""))
     print(f"\n  列说明: 均长=答案均字符数  符合=深度范围内答案数  格式=report_type 结构检查  rw=报告字符数")
     print(f"  深度图例: {_g('shallow')}  {_y('medium')}  {_c('deep')}")
+
+
+# ── Fact Checker Issue 分布统计 ───────────────────────────────────────────────
+
+def _print_issue_distribution(results: list[dict]) -> None:
+    """统计所有任务的 fact_checker issue 类型分布。"""
+    from collections import Counter
+
+    all_issues: list[dict] = []
+    per_task: list[tuple[str, str, list[dict]]] = []
+
+    for r in results:
+        if r.get("error"):
+            continue
+        fc     = r.get("fact_checker", {})
+        issues = fc.get("issues", [])
+        all_issues.extend(issues)
+        per_task.append((r["benchmark_task_id"], r["benchmark_task_name"], issues))
+
+    print(f"\n\n{'═' * 72}")
+    print(f"  {_b('Fact Checker Issue 类型分布')}")
+    print(f"{'═' * 72}")
+
+    if not all_issues:
+        print(f"  {_g('所有任务无 issue（或 issues 字段未记录）')}")
+        return
+
+    dist  = Counter(i.get("type", "unknown") for i in all_issues)
+    total = len(all_issues)
+
+    print(f"  共 {total} 条 issue，来自 {len(per_task)} 个任务\n")
+    print(f"  {'类型':<30}  {'数量':>6}  {'占比':>6}  {'触发补搜'}")
+    print(f"  {'─' * 58}")
+
+    # Must match fact_checker_node._SERIOUS_ISSUE_TYPES
+    RETRY_TYPES = {"contradiction", "overclaim", "insufficient_evidence"}
+    for itype, cnt in dist.most_common():
+        will_retry = _r("是") if itype in RETRY_TYPES else _g("否")
+        print(f"  {itype:<30}  {cnt:>6}  {cnt * 100 // total:>5}%  {will_retry}")
+
+    # 每任务明细
+    print(f"\n  {'─' * 58}")
+    print(f"  {'ID':<4}  {'名称':<20}  {'total':>5}  类型分布")
+    print(f"  {'─' * 58}")
+    for tid, name, issues in per_task:
+        if not issues:
+            print(f"  {tid:<4}  {name:<20}  {_g('0'):>5}")
+            continue
+        tdist = Counter(i.get("type", "?") for i in issues)
+        dist_str = "  ".join(f"{k}×{v}" for k, v in tdist.most_common())
+        has_retry = any(t in RETRY_TYPES for t in tdist)
+        n_s = _r(str(len(issues))) if has_retry else _y(str(len(issues)))
+        print(f"  {tid:<4}  {name:<20}  {n_s:>5}  {dist_str}")
+
+    retry_triggered = sum(
+        1 for _, _, issues in per_task
+        if any(i.get("type") in RETRY_TYPES for i in issues)
+    )
+    only_minor = sum(
+        1 for _, _, issues in per_task
+        if issues and not any(i.get("type") in RETRY_TYPES for i in issues)
+    )
+    print(f"\n  触发补搜（overclaim/contradiction/insufficient_evidence）：{_r(str(retry_triggered))} 个任务")
+    print(f"  仅含 citation_mismatch（analyst 引用修正，无需补搜）：{_y(str(only_minor))} 个任务")
 
 
 # ── 节点耗时汇总分析 ───────────────────────────────────────────────────────────
@@ -830,6 +895,7 @@ async def main(task_ids: list[str], concurrency: int) -> None:
         _print_task(task_map[result["benchmark_task_id"]], result)
 
     _print_summary(results, all_tasks)
+    _print_issue_distribution(results)
     _print_timing_analysis(results, wall_elapsed, min(concurrency, len(selected)))
     _print_llm_trace(results)
     print(f"\n  总耗时 {wall_elapsed:.1f}s（并发 {min(concurrency, len(selected))}）")

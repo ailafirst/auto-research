@@ -19,7 +19,7 @@ from typing import Any
 from app.core.config import settings
 from app.graph.state import ResearchState
 from app.services.crawler_service import CrawlerService
-from app.services.rag_service import RAGService
+from app.services.rag_service import RAGService, get_rag_service, rerank_chunks
 from app.services.search_service import SearchService
 
 logger = logging.getLogger(__name__)
@@ -57,17 +57,79 @@ _REPORT_TYPE_GUIDE: dict[str, str] = {
     ),
 }
 
-# benchmark 可在运行前覆写此值以降低 API 限速风险；生产代码保持默认 5
-_ANALYST_LLM_CONCURRENCY: int = 5
+# analyst 节点内子问题并发数，从配置读取；benchmark 可在启动时覆写模块变量。
+_ANALYST_LLM_CONCURRENCY: int = settings.analyst_concurrency
 
-# ── Short Output 检测阈值（实测最小有效内容 × 1.2）────────────────────────────
+# ── 结构化输出 JSON Schema ────────────────────────────────────────────────────
+# 通过 response_format 传给 LLM，强制输出符合 schema 的 JSON。
+# strict=True 要求模型严格遵守 schema（不允许额外字段）。
+_ANALYST_RESPONSE_FORMAT: dict = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "analyst_answer",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "sub_question_id": {"type": "string"},
+                "answer":          {"type": "string"},
+                "citations":       {"type": "array", "items": {"type": "string"}},
+                "confidence":      {"type": "number"},
+                "evidence_gap":    {"type": "boolean"},
+            },
+            "required": ["sub_question_id", "answer", "citations", "confidence", "evidence_gap"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+_FACT_CHECKER_RESPONSE_FORMAT: dict = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "fact_check_result",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "passed": {"type": "boolean"},
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type":            {"type": "string", "enum": ["insufficient_evidence", "contradiction", "overclaim", "citation_mismatch"]},
+                            "claim":           {"type": "string"},
+                            "reason":          {"type": "string"},
+                            "needed_evidence": {"type": "string"},
+                        },
+                        "required": ["type", "claim", "reason", "needed_evidence"],
+                        "additionalProperties": False,
+                    },
+                },
+                "follow_up_queries": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["passed", "issues", "follow_up_queries"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+# ── Short Output 检测阈值 ────────────────────────────────────────────────────
+# 目的：检测截断 / 乱码输出，而非强制最低质量（质量由 prompt 保证）。
+# 阈值 = 该节点结构完整但内容极简时的最小字符数，远低于"典型输出"。
+#
+# analyst   150：最短合法 JSON（id + 1句答案 + citations）≈ 160 chars；
+#                shallow 深度合法输出约 250-350 chars，原值 276 频繁误触发。
+# report_writer_deep   1500：7节结构都有标题时 ≈ 1200 chars；
+#                           原值 5345 远超模型实际产出（实测 3500-4200），造成无效重试。
+# report_writer_comparison 800：最小对比表 + 结论 ≈ 800 chars。
 _SHORT_THRESHOLDS: dict[str, int] = {
     "planner":                   720,
-    "analyst":                   276,
+    "analyst":                   150,
     "fact_checker":               50,
-    "report_writer_summary":     300,   # summary 格式本身 ≤600 字，956 会误触发
-    "report_writer_comparison": 3514,
-    "report_writer_deep":       5345,
+    "report_writer_summary":     300,
+    "report_writer_comparison":  800,
+    "report_writer_deep":       1500,
 }
 
 # 各节点重试时告知模型"必须包含哪些内容"的描述
@@ -320,6 +382,10 @@ async def retriever_node(state: ResearchState) -> dict[str, Any]:
     logger.info("Retriever 节点开始执行")
 
     search_service = SearchService()
+    # 发 1 次探针确认当前 Tavily key 可用；quota 耗尽则提前 rotate，
+    # 避免后续 N 个并发请求全撞到同一耗尽 key 引发级联串行重试。
+    await search_service.probe_key_pool()
+
     sub_questions = state.get("sub_questions", [])
 
     all_results: list[dict[str, Any]] = []
@@ -513,7 +579,7 @@ async def evidence_builder_node(state: ResearchState) -> dict[str, Any]:
     ]
 
     try:
-        rag_service = RAGService()
+        rag_service = get_rag_service()
         chunks = await rag_service.build_evidence(
             documents=documents,
             task_id=state["task_id"],
@@ -538,6 +604,7 @@ async def _analyze_single_question(
     sq_top_cids: dict[str, list[str]],
     search_summaries: list[dict[str, Any]] | None = None,
     research_strategy: dict[str, Any] | None = None,
+    mismatch_feedback: str = "",
 ) -> dict[str, Any]:
     """分析单个子问题（可并发调用）。
 
@@ -575,6 +642,7 @@ async def _analyze_single_question(
     per_question_content = (
         f"{tavily_block}"
         f"{hint_block}"
+        f"{mismatch_feedback}"
         f"当前子问题 ID: {qid}\n"
         f"问题: {question}\n\n"
         f"字数要求: {depth_guide}\n\n"
@@ -596,6 +664,7 @@ async def _analyze_single_question(
     result_str = await _llm_with_short_retry(
         llm, messages, "analyst", _SHORT_THRESHOLDS["analyst"],
         temperature=0.3,
+        response_format=_ANALYST_RESPONSE_FORMAT,
     )
 
     try:
@@ -626,6 +695,26 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     evaluated = state.get("evaluated_sources", [])
     search_summaries = state.get("search_summaries", [])
 
+    # Citation mismatch revision mode: re-analyze only affected sub-questions.
+    # Triggered when citation_mismatches is non-empty (set by fact_checker_node).
+    raw_citation_mismatches = state.get("citation_mismatches", [])
+    revision_mode = bool(raw_citation_mismatches)
+    mismatch_map: dict[str, str] = {}
+    existing_answers: dict[str, dict] = {}
+    if revision_mode:
+        for cm in raw_citation_mismatches:
+            sq_id = cm["sub_question_id"]
+            lines = ["[引用错误纠正] 以下引用被核查员标记为不匹配，请仅修正引用，保留原有分析结论："]
+            for issue in cm["issues"]:
+                lines.append(f"- 声明: 「{issue.get('claim', '')}」")
+                lines.append(f"  问题: {issue.get('reason', '')}")
+            lines.append("请重新作答，确保每个引用 CID 对应的来源内容实质支持该声明。\n")
+            mismatch_map[sq_id] = "\n".join(lines) + "\n"
+        existing_answers = {
+            sa["sub_question_id"]: sa for sa in state.get("sub_answers", [])
+        }
+        logger.info("Analyst 引用修正模式: %d 个子问题需修正", len(mismatch_map))
+
     accepted_urls = {e["url"] for e in evaluated if e.get("accepted")}
     accepted_docs = [d for d in crawled_docs if d.get("url") in accepted_urls]
     research_strategy = state.get("research_strategy", {})
@@ -634,7 +723,7 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     rag_service: RAGService | None = None
     qdrant_ok = False
     try:
-        rag_service = RAGService()
+        rag_service = get_rag_service()
         qdrant_ok = await rag_service.vector_store.health_check()
     except Exception:
         qdrant_ok = False
@@ -658,11 +747,15 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     sq_top_cids: dict[str, list[str]] = {}  # qid → 本题 top-3 CID（用于 user suffix hint）
 
     if qdrant_ok and rag_service:
+        retrieve_k = settings.reranker_retrieve_k if settings.reranker_enabled else 6
+
         async def _rag_for_sq(sq: dict) -> tuple[str, list[dict]]:
             try:
                 chunks = await rag_service.retrieve_evidence(
-                    query=sq["question"], task_id=task_id, top_k=6,
+                    query=sq["question"], task_id=task_id, top_k=retrieve_k,
                 )
+                if settings.reranker_enabled and chunks:
+                    chunks = await rerank_chunks(sq["question"], chunks, top_k=settings.reranker_top_k)
                 return sq.get("id", ""), chunks
             except Exception as exc:
                 logger.warning("共享 RAG 检索失败 [%s]: %s", sq.get("id"), exc)
@@ -673,15 +766,21 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
         seen_chunk_keys: set[tuple[str, str]] = set()
         for qid, chunks in rag_per_sq:
             q_top: list[str] = []
+            scores = [c.get("score", 0) for c in chunks]
+            above  = sum(1 for s in scores if s > 0.45)
+            logger.info(
+                "[RAG] %s: 检索 %d 条，得分 %s，通过阈值 0.45: %d 条",
+                qid, len(chunks),
+                "[" + ", ".join(f"{s:.3f}" for s in scores) + "]",
+                above,
+            )
             for chunk in chunks:
                 url = chunk.get("url", "")
                 key = (url, chunk.get("text", "")[:80])
                 cid = url_to_cid.get(url)
-                # 记录本题 top-3 CID（不受去重影响）
                 if cid and cid not in q_top and len(q_top) < 3:
                     q_top.append(cid)
-                # 全局去重后加入共享池
-                if key not in seen_chunk_keys and chunk.get("score", 0) > 0.3:
+                if key not in seen_chunk_keys and chunk.get("score", 0) > 0.45:
                     seen_chunk_keys.add(key)
                     shared_chunks.append(chunk)
             sq_top_cids[qid] = q_top
@@ -750,6 +849,17 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     sem = asyncio.Semaphore(_ANALYST_LLM_CONCURRENCY)
 
     async def bounded_analyze(sq: dict[str, Any]) -> dict[str, Any]:
+        qid = sq.get("id", "")
+        if revision_mode and qid not in mismatch_map:
+            # Keep existing answer for sub-questions without citation errors
+            return existing_answers.get(qid, {
+                "sub_question_id": qid,
+                "question": sq.get("question", ""),
+                "answer": "分析失败，请重试。",
+                "citations": [],
+                "confidence": 0.0,
+                "evidence_gap": True,
+            })
         async with sem:
             return await _analyze_single_question(
                 sq=sq,
@@ -757,6 +867,7 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
                 sq_top_cids=sq_top_cids,
                 search_summaries=search_summaries,
                 research_strategy=research_strategy,
+                mismatch_feedback=mismatch_map.get(qid, ""),
             )
 
     # 所有子问题并发执行，return_exceptions=True 保证单个失败不影响其他结果
@@ -779,9 +890,6 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
             })
         else:
             sub_answers.append(result)
-
-    if rag_service:
-        await rag_service.vector_store.close()
 
     logger.info(
         "Analyst 并发完成: %d 个子问题, %d 个成功",
@@ -818,9 +926,15 @@ async def _check_single_answer(
         # 用 Citation Registry 构建 URL→CID 映射，让核查来源标签与行内引用一致
         _url_cid = {c["url"]: c["id"] for c in (citation_registry or [])}
 
-        # 提取前 5 条接受来源的内容片段（每条 800 字），使用全局 CID 标签
+        # 优先使用 analyst 实际引用的来源，不足时用其余 accepted_docs 补齐到 5 条
+        cited_urls = {c["url"] for c in (citation_registry or []) if c["id"] in citations}
+        ordered_docs = (
+            [d for d in accepted_docs if d.get("url") in cited_urls]
+            + [d for d in accepted_docs if d.get("url") not in cited_urls]
+        )[:5]
+
         source_parts: list[str] = []
-        for i, doc in enumerate(accepted_docs[:5]):
+        for i, doc in enumerate(ordered_docs):
             content = (doc.get("content") or "")[:800]
             if content:
                 url = doc.get("url", "")
@@ -843,6 +957,7 @@ async def _check_single_answer(
         result_str = await _llm_with_short_retry(
             llm, messages, "fact_checker", _SHORT_THRESHOLDS["fact_checker"],
             temperature=0.1,
+            response_format=_FACT_CHECKER_RESPONSE_FORMAT,
         )
 
         try:
@@ -879,6 +994,7 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
             "fact_check_result":  {"passed": True, "issues": [], "follow_up_queries": []},
             "fact_check_passed":  True,
             "follow_up_queries":  [],
+            "citation_mismatches": [],
             "progress":           85,
             "progress_message":   "无子问题，跳过事实核查",
         }
@@ -888,7 +1004,7 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
 
     llm    = LLMService()
     prompt = _read_prompt("fact_checker")
-    sem    = asyncio.Semaphore(3)   # 最多 3 个并发核查，避免 API 限速
+    sem    = asyncio.Semaphore(settings.fact_checker_concurrency)
 
     citation_registry = state.get("citation_registry", [])
     check_results = await asyncio.gather(
@@ -897,19 +1013,31 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
         return_exceptions=True,
     )
 
-    all_issues:      list[dict[str, Any]] = []
-    all_follow_ups:  list[str]            = []
-    seen_follow_ups: set[str]             = set()
+    # Only these types trigger supplementary search; citation_mismatch goes to analyst retry
+    _SERIOUS_ISSUE_TYPES = {"contradiction", "overclaim", "insufficient_evidence"}
+
+    all_issues:           list[dict[str, Any]] = []
+    all_follow_ups:       list[str]            = []
+    seen_follow_ups:      set[str]             = set()
+    citation_mismatches:  list[dict[str, Any]] = []
     any_failed = False
 
     for cr in check_results:
         if isinstance(cr, Exception):
             logger.warning("单问题事实核查异常: %s", cr)
             continue
-        if not cr.get("passed", True):
+
+        issues = cr.get("issues", [])
+        sq_id  = cr.get("sub_question_id", "")
+
+        if any(i.get("type") in _SERIOUS_ISSUE_TYPES for i in issues):
             any_failed = True
-        for issue in cr.get("issues", []):
-            all_issues.append(issue)
+
+        cm_issues = [i for i in issues if i.get("type") == "citation_mismatch"]
+        if cm_issues:
+            citation_mismatches.append({"sub_question_id": sq_id, "issues": cm_issues})
+
+        all_issues.extend(issues)
         for fq in cr.get("follow_up_queries", []):
             if fq not in seen_follow_ups:
                 seen_follow_ups.add(fq)
@@ -921,20 +1049,29 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
         "follow_up_queries": all_follow_ups[:5],
     }
 
-    logger.info(
-        "Fact Checker 并发完成: %d 个子问题, %d 个 issue, %d 条 follow_up",
-        len(sub_answers), len(all_issues), len(all_follow_ups),
+    n_serious = sum(
+        1 for i in all_issues if i.get("type") in _SERIOUS_ISSUE_TYPES
     )
+    n_cm = len(citation_mismatches)
+    logger.info(
+        "Fact Checker 并发完成: %d 个子问题, %d 个严重 issue, %d 处引用不匹配, %d 条 follow_up",
+        len(sub_answers), n_serious, n_cm, len(all_follow_ups),
+    )
+
+    msg_parts = []
+    if n_serious:
+        msg_parts.append(f"{n_serious} 个严重问题")
+    if n_cm:
+        msg_parts.append(f"{n_cm} 处引用不匹配")
+    progress_message = f"事实核查完成: {', '.join(msg_parts)}" if msg_parts else "事实核查通过"
 
     return {
         "fact_check_result":  fact_check_result,
         "fact_check_passed":  fact_check_result["passed"],
         "follow_up_queries":  all_follow_ups[:5],
+        "citation_mismatches": citation_mismatches,
         "progress":           85,
-        "progress_message": (
-            f"事实核查完成: {len(all_issues)} 个问题"
-            if all_issues else "事实核查通过"
-        ),
+        "progress_message":   progress_message,
     }
 
 
