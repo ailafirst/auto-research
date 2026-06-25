@@ -313,7 +313,7 @@
 
 ---
 
-## 待解决问题清单
+## 待解决问题清单（v0.1.3 收尾）
 
 | 优先级 | 问题 | 状态 | 说明 |
 |--------|------|------|------|
@@ -321,10 +321,11 @@
 | P1 | Embedding 并发 OOM | ✅ 间接缓解（并发=4 自然避免） | 根本修复待 Qdrant Cloud key |
 | P1 | Embedding 根本修复（fastembed→OpenAI API） | 🟡 待实施（等 Qdrant Cloud key） | `rag_service.py` |
 | P1 | deep depth 字数超标（均长 881，期望 ≤800） | 🟡 部分改善（第三轮 1165→第四轮 881，-24%） | 合规率仍低，需进一步强化 |
-| P1 | fact_checker passed 聚合逻辑过严（0/12 passed） | 🔴 未修复（Bug G） | 需按 issue type 区分严重性 |
+| P1 | fact_checker passed 聚合逻辑过严（0/12 passed） | ✅ 已修复（v0.1.4，Bug G） | 仅 serious issue 影响 passed |
 | P1 | `report_writer_summary` SHORT 阈值误设（956 过高） | 🔴 未修复（Bug F） | 应调低至 300 |
 | P2 | benchmark Tavily/LLM 限速 | ✅ 已缓解（并发调优 + key 轮换） | `analyst_benchmark.py` + `nodes.py` |
 | P2 | report_writer 静默截断（60 字符） | ✅ 已修复（SHORT 阈值 + 重试） | `nodes.py` `_llm_with_short_retry` |
+| P2 | Tavily 432 配额错误误判为限速 | ✅ 已修复（v0.1.4） | `search_service.py` 配额先判 |
 
 ---
 
@@ -336,7 +337,218 @@
 | 第二轮 | 11/11 | — |
 | 第三轮 | 10/12 | task 03 summary 略超字数；task 05 极短内容（60 字） |
 | **第四轮** | **12/12** | SHORT 重试救回 report_writer deep × 3；summary 阈值误触发但结果可用 |
+| 第五～八轮 | 12/12 | v0.1.4 各轮次格式均完全通过 |
 
 - **summary**：控制在 600 字要求下通常 800–1200 字（LLM 倾向生成更长内容）
 - **comparison**：全部自动生成 Markdown 对比表格
-- **deep**：8–12 节丰富结构，第四轮平均 5306 字
+- **deep**：8–12 节丰富结构，第四轮平均 5306 字，第八轮平均 5190 字
+
+---
+
+---
+
+# v0.1.4 改进记录
+
+> 前置版本：v0.1.3（截至第四轮 benchmark，2026-06-23 13:10）
+> 目标：提升 fact_checker 区分度、analyst 引用准确性，消除 citation_mismatch 类误差
+
+## v0.1.4 改进项总览
+
+| 编号 | 问题 | 状态 | 实施时间 |
+|------|------|------|----------|
+| #6 | fact_checker 路由粒度不足（所有 issue 等价触发补搜，无引用修正分支） | ✅ 已实施 | 2026-06-23 |
+| #7 | citation_mismatch 修正后缺乏验证（只重跑 analyst，不重跑 fact_checker） | ✅ 已实施 | 2026-06-23 |
+| #8 | analyst 引用准确性低（无 JSON schema 约束，LLM 自由发挥引用格式） | ✅ 已实施 | 2026-06-23 |
+| #9 | fact_checker needed_evidence 填写不规范（cm 应留空但 LLM 随意填写） | ✅ 已实施 | 2026-06-23 |
+
+---
+
+## v0.1.4 改进详情
+
+### #6 fact_checker 路由差异化（2026-06-23）
+
+**问题**：所有 issue 类型（citation_mismatch / insufficient_evidence / overclaim / contradiction）均触发同一路径——标记 `fact_check_passed=False` 并进入下一轮补充搜索。`citation_mismatch` 不需要补搜，只需告知 analyst 修正引用；且 `passed` 逻辑过严，任意 issue 即整体 false（Bug G）。
+
+**实施内容**：
+
+- `app/graph/nodes.py`：
+  - 新增 `_SERIOUS_ISSUE_TYPES = {"contradiction", "overclaim", "insufficient_evidence"}`
+  - `fact_checker_node` 按类型分流：serious issue → `any_failed=True`（触发补搜）；`citation_mismatch` → 写入 `state["citation_mismatches"]`，不影响 `fact_check_passed`
+  - 新增 `needed_evidence` 字段：serious issue 要求 LLM 给出具体补证描述；`citation_mismatch` 强制留空
+- `app/graph/state.py`：新增 `citation_mismatches: list[dict]`、`analyst_revision_done: bool`
+- `app/api/routes_research.py`：新增 `_revise_citations()` 闭包，在每轮 `_run_round()` 后执行
+
+**`_revise_citations()` 逻辑**：
+1. 若 `citation_mismatches` 非空且无 serious issue（`fact_check_passed=True`），触发修正
+2. 调用 `analyst_node`（revision 模式，仅重跑有 mismatch 的子问题，注入 `[引用错误纠正]` 提示）
+3. 重跑 `fact_checker_node` 验证修正结果
+4. 重跑 `report_writer_node` 生成修订报告
+
+### #7 引用修正后再验证（2026-06-23）
+
+**问题**：早期设计直接将 `fact_check_passed` 设为 True 而不做验证，无法确认修正是否有效。
+
+**实施内容**：`_revise_citations()` 在 `analyst_node` 重跑后**再次调用 `fact_checker_node`**，只有第二次核查确认 citation_mismatch 消失后，状态才真正通过。revision_mode 由 `bool(citation_mismatches)` 独立控制，不依赖 `analyst_revision_done` 标志。
+
+### #8 结构化输出 JSON Schema（2026-06-23）
+
+**问题**：analyst 和 fact_checker 均以自由文本回答，LLM 自行决定引用格式和字段，导致解析脆弱、引用随意（33 条 citation_mismatch/轮）。
+
+**实施内容**（`app/graph/nodes.py`）：
+
+- 新增 `_ANALYST_RESPONSE_FORMAT`（`json_schema strict`）：
+  ```
+  字段: sub_question_id / answer / citations(array) / confidence / evidence_gap
+  ```
+- 新增 `_FACT_CHECKER_RESPONSE_FORMAT`（`json_schema strict`）：
+  ```
+  字段: passed / issues(array{type/claim/reason/needed_evidence}) / follow_up_queries
+  issue.type 枚举: insufficient_evidence | contradiction | overclaim | citation_mismatch
+  ```
+- `_llm_with_short_retry()` 接受 `**llm_kwargs`，`response_format` 透明传递至底层 `LLMService`
+- `LLMService.chat()` 类型注解从 `dict[str, str]` 修正为 `dict[str, Any]`
+
+### #9 Prompt Few-Shot 示例（2026-06-23）
+
+**问题**：`needed_evidence` 正确率仅 43%（v2）；`citation_mismatch` 的 `needed_evidence` 应留空，LLM 仍有 7/77 条错误填写。
+
+**实施内容**：
+
+- `app/prompts/fact_checker.md`：完全重写
+  - 添加 needed_evidence 规则表（按 issue 类型：serious 必填，cm 必须为空字符串）
+  - 4 条 few-shot 示例：pass / insufficient_evidence+needed_evidence / citation_mismatch+空NE / overclaim+needed_evidence
+- `app/prompts/analyst.md`：完全重写
+  - 添加 3 条 few-shot 示例，第 3 条专门示范"❌ 引用不相关来源 vs ✓ 只引用真正支持该声明的来源"
+
+---
+
+## v0.1.4 Benchmark 结果
+
+### 第五轮：v0.1.4 基线（旧 fact_checker 格式参照）
+
+**时间**：2026-06-23 16:12
+**结果文件**：`benchmark/results/analyst_20260623_161237.json`
+**说明**：此轮为添加 citation routing 前的参照运行，fact_checker 结果使用旧格式（无 `issues` 数组字段），issues 均显示 0，不作为质量对比基准，仅用于核实流程完整性。
+
+---
+
+### 第六轮：+citation routing & fact_checker 重构
+
+**时间**：2026-06-23 23:04
+**结果文件**：`benchmark/results/analyst_20260623_230453.json`
+**配置**：并发=4，analyst LLM 并发=3
+
+**本轮新增**：#6 fact_checker 路由差异化、`needed_evidence` 字段、`_revise_citations()` 流程
+
+| ID | 任务 | issues | 类型分布 |
+|----|------|--------|---------|
+| 01 | LLM推理加速 | 7 | insufficient_evidence×4, citation_mismatch×3 |
+| 02 | Python vs Rust对比 | 4 | citation_mismatch×3, insufficient_evidence×1 |
+| 03 | 量子计算基础 | 0 | — |
+| 04 | RAG系统最佳实践 | 4 | citation_mismatch×3, insufficient_evidence×1 |
+| 05 | AI芯片竞争格局 | 15 | insufficient_evidence×9, citation_mismatch×4, overclaim×2 |
+| 06 | GDPR与个人信息保护法对比 | 5 | citation_mismatch×3, insufficient_evidence×1, overclaim×1 |
+| 07 | 碳中和技术路径 | 18 | insufficient_evidence×9, citation_mismatch×7, overclaim×2 |
+| 08 | 电商推荐系统搭建 | 7 | citation_mismatch×4, insufficient_evidence×2, overclaim×1 |
+| 09 | LLM幻觉问题 | 1 | citation_mismatch×1 |
+| 10 | 固态电池商业化 | 2 | citation_mismatch×1, insufficient_evidence×1 |
+| 11 | 微服务vs单体架构 | 4 | citation_mismatch×4 |
+| 12 | AGI技术障碍 | 10 | insufficient_evidence×9, overclaim×1 |
+| **合计** | | **77** | cm×33, insuf×37, over×7 |
+
+**needed_evidence 正确率**：33/77（43%）— citation_mismatch 的 needed_evidence 有 44 条错误填写（应留空）
+
+---
+
+### 第七轮：+few-shot prompt
+
+**时间**：2026-06-23 23:46
+**结果文件**：`benchmark/results/analyst_20260623_234638.json`
+**配置**：并发=4，analyst LLM 并发=3
+
+**本轮新增**：#9 analyst.md 和 fact_checker.md 添加 few-shot 示例
+
+| ID | 任务 | issues | 类型分布 |
+|----|------|--------|---------|
+| 01 | LLM推理加速 | 3 | insufficient_evidence×3 |
+| 02 | Python vs Rust对比 | 4 | citation_mismatch×2, insufficient_evidence×2 |
+| 03 | 量子计算基础 | 5 | citation_mismatch×3, overclaim×1, insufficient_evidence×1 |
+| 04 | RAG系统最佳实践 | 3 | insufficient_evidence×2, citation_mismatch×1 |
+| 05 | AI芯片竞争格局 | 13 | insufficient_evidence×9, citation_mismatch×3, overclaim×1 |
+| 06 | GDPR与个人信息保护法对比 | 10 | citation_mismatch×6, insufficient_evidence×4 |
+| 07 | 碳中和技术路径 | 10 | insufficient_evidence×6, citation_mismatch×4 |
+| 08 | 电商推荐系统搭建 | 8 | insufficient_evidence×6, citation_mismatch×2 |
+| 09 | LLM幻觉问题 | 7 | citation_mismatch×7 |
+| 10 | 固态电池商业化 | 7 | insufficient_evidence×4, overclaim×2, citation_mismatch×1 |
+| 11 | 微服务vs单体架构 | 5 | citation_mismatch×5 |
+| 12 | AGI技术障碍 | 2 | citation_mismatch×2 |
+| **合计** | | **77** | cm×36, insuf×37, over×4 |
+
+**needed_evidence 正确率**：70/77（91%）— few-shot 显著改善 NE 填写，仍有 7 条 citation_mismatch 错误非空
+
+**关键发现**：few-shot 对 issue **数量**无效（77→77），对 NE **填写质量**显著有效（43%→91%）
+
+---
+
+### 第八轮：+结构化输出 JSON Schema
+
+**时间**：2026-06-24 06:26
+**结果文件**：`benchmark/results/analyst_20260624_062646.json`
+**配置**：并发=4，总耗时 1104.2s（18.4 分钟），并发效率 97%
+
+**本轮新增**：#8 analyst + fact_checker 均使用 `json_schema strict` 结构化输出
+
+| ID | 任务 | depth | 均长 | 置信 | issues | 通过 | 类型分布 | analyst | fc | writer | 耗时 |
+|----|------|-------|------|------|--------|------|---------|---------|-----|--------|------|
+| 01 | LLM推理加速 | medium | 481 | 83% | 0 | ✓ | — | 14s | 3s | 42s | 369s |
+| 02 | Python vs Rust对比 | deep | 894 | 83% | 0 | ✓ | — | 27s | 3s | 37s | 269s |
+| 03 | 量子计算基础 | shallow | 223 | 85% | 0 | ✓ | — | 5s | 2s | 14s | 273s |
+| 04 | RAG系统最佳实践 | deep | 721 | 81% | 2 | ✗ | insufficient_evidence×2 | 19s | 7s | 57s | 384s |
+| 05 | AI芯片竞争格局 | deep | 629 | 81% | 0 | ✓ | — | 25s | 3s | 99s | 373s |
+| 06 | GDPR与个人信息保护法对比 | deep | 973 | 83% | 0 | ✓ | — | 22s | 3s | 45s | 445s |
+| 07 | 碳中和技术路径 | deep | 903 | 84% | 0 | ✓ | — | 21s | 3s | 52s | 426s |
+| 08 | 电商推荐系统搭建 | deep | 667 | 83% | 0 | ✓ | — | 18s | 4s | 54s | 346s |
+| 09 | LLM幻觉问题 | deep | 833 | 84% | 3 | ✗ | insufficient_evidence×3 | 20s | 10s | 43s | 439s |
+| 10 | 固态电池商业化 | deep | 629 | 84% | 0 | ✓ | — | 19s | 4s | 22s | 369s |
+| 11 | 微服务vs单体架构 | deep | 655 | 86% | 0 | ✓ | — | 18s | 3s | 40s | 374s |
+| 12 | AGI技术障碍 | deep | 684 | 78% | 0 | ✓ | — | 24s | 3s | 45s | 239s |
+| **均值** | | | **691** | **83%** | **0.4** | **10/12** | | **19s** | **4s** | **46s** | **359s** |
+
+**needed_evidence 正确率**：5/5（100%）— 无 citation_mismatch，5 条 insufficient_evidence 均有具体补证描述
+
+### 第八轮耗时分析
+
+| 节点 | 类型 | 均值 | 串行占比 |
+|------|------|------|---------|
+| evidence_builder | Embed | 211.5s | **58.9%** ← 主瓶颈 |
+| retriever | Search | 67.6s | 18.9% |
+| report_writer | LLM | 45.9s | 12.8% |
+| analyst | LLM | 19.2s | 5.4% |
+| planner | LLM | 10.8s | 3.0% |
+| fact_checker | LLM | 3.8s | 1.1% |
+| LLM 合计 | | 79.7s | 22% |
+| 非 LLM 合计 | | 279.1s | 78% |
+
+---
+
+## v0.1.4 四轮横向对比
+
+| 指标 | 第六轮（基线） | 第七轮（+few-shot） | 第八轮（+JSON schema） | 变化 |
+|------|--------------|------------------|---------------------|------|
+| 总 issues | 77 | 77 | **5** | -94% |
+| citation_mismatch | 33 | 36 | **0** | 完全消除 |
+| insufficient_evidence | 37 | 37 | **5** | -86% |
+| overclaim | 7 | 4 | **0** | 完全消除 |
+| contradiction | 0 | 0 | **0** | — |
+| 受影响任务数 | 11/12 | 12/12 | **2/12** | — |
+| needed_evidence 正确率 | 43%（33/77） | 91%（70/77） | **100%（5/5）** | 逐轮提升 |
+| 格式符合率 | 12/12 | 12/12 | **12/12** | 稳定 |
+| 平均置信度 | ~82% | ~82% | **83%** | 微升 |
+| 挂钟时间 | — | — | **1104s（并发 4）** | — |
+
+### 关键结论
+
+1. **few-shot 对 issue 数量无效，对质量有效**：第七轮 issues 数量与第六轮相同（77 vs 77），但 needed_evidence 正确率从 43% 升至 91%。few-shot 改变了填写行为，但未能约束引用格式。
+2. **结构化输出是决定性突破**：JSON schema strict 模式下，analyst 的引用字段被严格约束，citation_mismatch 从 33/36 条降至 **0**，总 issues 从 77 降至 **5**（-94%）。
+3. **剩余 5 条 insufficient_evidence 是真实知识空白**：涉及 RAG 重排序技术细节和 LLM 幻觉检测方法，均因引用的来源只有标题/摘要片段而缺乏实质内容，属于检索层面的信息不足，非 analyst 引用错误。
+4. **citation_mismatch 路径（`_revise_citations`）存在但未被触发**：第八轮 analyst 引用质量提升后，fact_checker 不再产生 citation_mismatch，citation retry 路径作为安全网保留但在当前质量水平下无需激活。

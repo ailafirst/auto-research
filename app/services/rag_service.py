@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Any
 
 from app.core.config import settings
@@ -17,15 +18,53 @@ logger = logging.getLogger(__name__)
 class TextChunker:
     """文本切片器。"""
 
+    # 句子边界：中英文句末标点 + 换行。用于切分超长"段落"——raw_content 提取常丢失
+    # 段落边界，使 split("\n\n") 产出多段黏连的巨块，需在句子处二次切分。
+    _SENT_BOUNDARY = re.compile(r"(?<=[。！？!?；;\n])")
+
     def __init__(self, chunk_size: int | None = None, overlap: int | None = None) -> None:
         self.chunk_size = chunk_size or settings.chunk_size
         self.overlap = overlap or settings.chunk_overlap
 
+    def _split_oversized(self, para: str) -> list[str]:
+        """将超过 chunk_size 的段落按句子边界切分为 ≤chunk_size 的片段。
+
+        目的：让每个 chunk 都落在 embedding 的 512-token 窗口内，使向量真正代表
+        全文（而非前 1/3 的模糊平均）。切分只在句末标点/换行处发生，绝不切断句子；
+        仅当单句本身超长（无标点长串，罕见）时才硬切兜底。正常段落原样返回。
+        """
+        if len(para) <= self.chunk_size:
+            return [para]
+        sentences = [s for s in self._SENT_BOUNDARY.split(para) if s.strip()]
+        pieces: list[str] = []
+        buf = ""
+        for sent in sentences:
+            if len(buf) + len(sent) <= self.chunk_size:
+                buf += sent
+            else:
+                if buf:
+                    pieces.append(buf.strip())
+                if len(sent) > self.chunk_size:
+                    # 单句超长：按 chunk_size 硬切（兜底，正常文本不会触发）
+                    for i in range(0, len(sent), self.chunk_size):
+                        pieces.append(sent[i:i + self.chunk_size].strip())
+                    buf = ""
+                else:
+                    buf = sent
+        if buf.strip():
+            pieces.append(buf.strip())
+        return pieces
+
     def chunk_text(self, text: str, source_id: str, task_id: str,
                    url: str, title: str) -> list[EvidenceChunk]:
         """将文本分割为多个 Chunk。"""
-        # 先按段落分割
-        paragraphs = text.split("\n\n")
+        # 先按段落分割，再将超长段落（提取丢失边界的巨块）按句子边界二次切分
+        paragraphs = [
+            sub
+            for para in text.split("\n\n")
+            for sub in self._split_oversized(para.strip())
+            if sub.strip()
+        ]
         chunks: list[EvidenceChunk] = []
         current_chunk = ""
         chunk_index = 0
@@ -50,12 +89,10 @@ class TextChunker:
                     ))
                     chunk_index += 1
 
-                # 保留 overlap 部分
-                words = current_chunk.split()
-                overlap_text = ""
-                if words and self.overlap > 0:
-                    overlap_words = words[-min(len(words), self.overlap // 5):]
-                    overlap_text = " ".join(overlap_words)
+                # 保留 overlap 部分（按字符截取，兼容中文——中文无空格，旧的
+                # current_chunk.split() 会把整段视为一个词，使 overlap 退化为整个
+                # 上一 chunk，导致每个中文 chunk 被撑大近一倍）
+                overlap_text = current_chunk[-self.overlap:] if self.overlap > 0 else ""
 
                 current_chunk = (overlap_text + "\n\n" + para).strip()
 
@@ -337,7 +374,8 @@ async def rerank_chunks(
         return chunks
     k = top_k or settings.reranker_top_k
     reranker = await _get_reranker()
-    pairs = [(query, c.get("text", "")[:512]) for c in chunks]
+    # 截断上限覆盖整个 chunk（切分后 ≤chunk_size≈800 字符），避免只按前半段打分
+    pairs = [(query, c.get("text", "")[:1024]) for c in chunks]
 
     def _predict() -> list[float]:
         return reranker.predict(pairs).tolist()
