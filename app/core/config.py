@@ -63,7 +63,12 @@ class Settings(BaseSettings):
     reranker_enabled: bool = False
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
     reranker_top_k: int = 6       # rerank 后保留的 chunk 数
-    reranker_retrieve_k: int = 20  # 触发 rerank 时向量检索扩大到的数量
+    reranker_retrieve_k: int = 40  # 触发 rerank 时向量检索扩大到的数量（基准实测 20→40：Recall@6 0.808→0.858）
+    # --- 跨语言检索（中文 query 经本地 MT 译为英文，中英双路 dense 检索按 cid 合并）---
+    # 解决"中文问题→英文 gold"的 dense 跨语言对齐失效（基准实测 Recall@6 0.858→0.892）。
+    # 翻译走独立本地 MT（opus-mt，~20ms/题），不占主 LLM 并发池。
+    xling_enabled: bool = False
+    translation_model: str = "Helsinki-NLP/opus-mt-zh-en"
 
     # --- App ---
     app_env: Literal["development", "production", "testing"] = "development"

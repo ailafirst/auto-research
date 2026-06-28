@@ -36,6 +36,10 @@ tests/data/
 
 benchmark/results/
 
+# 黄金集构建缓存与中间产物（golden_set.json 为冻结基准，需入库；以下可由 build_golden_set.py 重建）
+benchmark/GoldenDataset/_corpus_*.json
+benchmark/GoldenDataset/golden_set_raw.json
+
 # API Key 文件
 tavily.txt
 
