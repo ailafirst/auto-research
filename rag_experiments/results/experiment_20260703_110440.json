@@ -1,0 +1,84 @@
+{
+  "config": {
+    "embedding_model": "BAAI/bge-m3",
+    "retrieve_k": 40,
+    "rerank_k": 6,
+    "rerank_enabled": true,
+    "xling_enabled": true
+  },
+  "schemes": [
+    "graph_v"
+  ],
+  "tasks": [
+    "04"
+  ],
+  "baseline": [],
+  "graph_v": [
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "r_vec": 7,
+          "r_rer": null,
+          "r_graph": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "r_vec": 1,
+          "r_rer": 1,
+          "r_graph": 1
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "r_vec": 1,
+          "r_rer": 1,
+          "r_graph": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "r_vec": 1,
+          "r_rer": 1,
+          "r_graph": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "r_vec": null,
+          "r_rer": null,
+          "r_graph": null
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "r_vec": 1,
+          "r_rer": null,
+          "r_graph": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "r_vec": 11,
+          "r_rer": 5,
+          "r_graph": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "r_vec": 1,
+          "r_rer": 1,
+          "r_graph": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "r_vec": 66,
+          "r_rer": 2,
+          "r_graph": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "r_vec": 1,
+          "r_rer": 1,
+          "r_graph": 1
+        }
+      ]
+    }
+  ],
+  "elapsed_seconds": 19.5
+}

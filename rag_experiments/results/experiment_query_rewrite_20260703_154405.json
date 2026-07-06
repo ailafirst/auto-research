@@ -1,0 +1,525 @@
+{
+  "config": {
+    "embedding_model": "BAAI/bge-m3",
+    "retrieve_k": 40,
+    "rerank_k": 6,
+    "rerank_enabled": true,
+    "xling_enabled": true,
+    "rewrite_mode": "keyword",
+    "rewrite_num_groups": 4
+  },
+  "schemes": [
+    "baseline",
+    "keyword"
+  ],
+  "tasks": [
+    "01",
+    "04",
+    "07"
+  ],
+  "baseline": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "r_vec": 5,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "r_vec": 20,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "r_vec": 9,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "r_vec": 2,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "r_vec": 11,
+          "r_rer": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "r_vec": 66,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "r_vec": 7,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    }
+  ],
+  "keyword": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "keywords": [
+            "W4A16 asymmetric quantization inference deployment",
+            "memory-constrained edge devices model compression",
+            "post-training quantization low-bit weight activation",
+            "edge AI inference latency throughput optimization"
+          ],
+          "r_vec": 20,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "keywords": [
+            "Base64 encoding format specification",
+            "Base64 newline characters CRLF LF",
+            "Base64 string padding whitespace handling",
+            "Base64 encoded data line breaks RFC 4648"
+          ],
+          "r_vec": 26,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "keywords": [
+            "Token Merging ToMe multi-head attention output merging",
+            "attention token similarity metric clustering algorithm",
+            "token reduction efficiency speedup computation reduction",
+            "visual recognition accuracy impact ablation study"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "keywords": [
+            "Marlin-AWQ quantization algorithm inference",
+            "HumanEval benchmark Pass@1 score",
+            "code generation throughput latency tokens per second",
+            "AWQ activation-aware weight quantization"
+          ],
+          "r_vec": 13,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "keywords": [
+            "Xilinx Alveo U280 VCK5000 VHK158 FPGA performance",
+            "FPGA tokens per second decoding throughput benchmark",
+            "Xilinx FPGA inference latency hardware acceleration",
+            "large language model FPGA decoding tokens/s"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "keywords": [
+            "LLM inference optimization flash memory hierarchy",
+            "model efficiency dynamic sparse attention KV cache",
+            "offloading weights compute memory management",
+            "retrieval augmented generation flash-based mechanism"
+          ],
+          "r_vec": 6,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "keywords": [
+            "sparse attention transformer mechanism",
+            "attention sparsification methods local windowed",
+            "efficient transformer linear attention",
+            "longformer bigbird sparse transformer"
+          ],
+          "r_vec": 30,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "keywords": [
+            "edge deployment large language models constraints",
+            "model compression quantization pruning knowledge distillation",
+            "edge computing hardware accelerators NPU inference latency",
+            "memory footprint power consumption bandwidth limitations"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "keywords": [
+            "BK-SDM model compression training cost reduction",
+            "Stable Diffusion latent diffusion model efficiency",
+            "BK-SDM parameter pruning distillation efficiency",
+            "computational cost comparison diffusion model training"
+          ],
+          "r_vec": 11,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "keywords": [],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "keywords": [
+            "RAG fine-tuned embeddings retrieval performance improvement",
+            "embedding fine-tuning retrieval quality relevance ranking",
+            "parameter-efficient fine-tuning LoRA adapter RAG embeddings",
+            "retrieval augmentation embedding model domain adaptation"
+          ],
+          "r_vec": 12,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "keywords": [
+            "semantic metadata filter schema validation vector store configuration",
+            "metadata schema query class vector database structure verification",
+            "semantic filter implementation vector store schema check pre-query",
+            "metadata schema introspection vector store validation configuration"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "keywords": [
+            "OpenAI function calling API capabilities",
+            "tool use API GPT assistant features",
+            "function definitions structured outputs parameters",
+            "API documentation OpenAI assistant integrations"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "keywords": [
+            "LIDC cookie expiration duration days",
+            "LIDC authentication token lifetime",
+            "LIDC session cookie validity period",
+            "LIDC persistent cookie duration specification"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "keywords": [
+            "large language model faithfulness generation faithfulness",
+            "context utilization information omission LLM hallucination",
+            "prompt engineering context window length tokenization",
+            "retrieval augmented generation grounding error analysis"
+          ],
+          "r_vec": 154,
+          "r_rer": 1
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "keywords": [],
+          "r_vec": 2,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "keywords": [
+            "retrieval augmented generation customer service performance",
+            "RAG latency throughput real-time inference",
+            "knowledge base retrieval accuracy domain-specific QA",
+            "response quality faithfulness customer satisfaction metrics"
+          ],
+          "r_vec": 19,
+          "r_rer": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "keywords": [
+            "OCR scanning failure causes RAG pipeline data extraction",
+            "document preprocessing errors image quality degradation",
+            "text extraction challenges PDF scan resolution",
+            "optical character recognition misclassification noise artifacts"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "keywords": [
+            "embedding model evaluation real user queries sample representativeness",
+            "query distribution shift bias generalization performance degradation",
+            "evaluation set design domain coverage user intent alignment",
+            "test data selection pitfalls overfitting robustness reliability"
+          ],
+          "r_vec": 92,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "keywords": [
+            "RAG fusion semantic search efficiency improvement",
+            "fusion techniques query expansion hybrid retrieval",
+            "semantic search ranking relevance boosting methods",
+            "dense retrieval sparse retrieval hybrid fusion"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "keywords": [
+            "Massachusetts Department of Environmental Protection carbon allowance auction",
+            "2023 Massachusetts carbon allowance auction volume tons",
+            "MA DEP carbon allowance auction results 2023",
+            "RGGI Massachusetts auction tonnage sold"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "keywords": [
+            "Korean ETS Phase 3 offset credit quantitative limit",
+            "compliance obligation percentage cap offset allowance",
+            "Korea carbon market offset credit restriction policy",
+            "emission trading scheme offset credit utilization ratio"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "keywords": [
+            "EU ETS 2 transport buildings implementation timeline",
+            "European Union Emissions Trading System Phase 2",
+            "ETS 2 road transport buildings sector coverage",
+            "EU climate policy transport buildings carbon pricing"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "keywords": [
+            "CBAM annual declaration deadline EU importer",
+            "Carbon Border Adjustment Mechanism reporting timeline",
+            "EU CBAM transitional registry submission dates",
+            "CBAM compliance schedule quarterly annual reports"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "keywords": [
+            "carbon border adjustment mechanism CBAM steel aluminum exports",
+            "carbon tariff 100 euros per ton emission reduction forecast",
+            "China EU trade 2030 decarbonization metal products",
+            "CBAM impact assessment steel aluminum carbon leakage"
+          ],
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "keywords": [
+            "DNV carbon pricing policy advisory services",
+            "DNV carbon market readiness enterprise support",
+            "DNV climate transition strategy carbon compliance",
+            "carbon pricing mechanism ETS CBAM corporate strategy"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "keywords": [
+            "HS code 721260 product classification",
+            "harmonized system code steel flat rolled",
+            "trade tariff classification 7212 hot rolled",
+            "customs duty rate HS 721260"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "keywords": [
+            "CBAM carbon border adjustment mechanism certificate pricing",
+            "EU ETS emissions trading system allowance price",
+            "carbon price benchmark reference price methodology",
+            "CBAM reporting obligations embedded emissions calculation"
+          ],
+          "r_vec": 11,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "keywords": [
+            "Wang Haijun carbon emissions trading China MRV system",
+            "carbon market MRV challenges 2018 China",
+            "China ETS MRV system verification reporting",
+            "Chinese carbon trading market MRV DOI"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "keywords": [
+            "Su Qingyi author publication 2023 World Knowledge journal",
+            "World Knowledge 2023 issue 5 article title Chinese periodical",
+            "Su Qingyi World Knowledge journal article bibliography",
+            "academic article search Su Qingyi 2023 World Knowledge"
+          ],
+          "r_vec": 18,
+          "r_rer": 1
+        }
+      ]
+    }
+  ],
+  "elapsed_seconds": 130.6
+}

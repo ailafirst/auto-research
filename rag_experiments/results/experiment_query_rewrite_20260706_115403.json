@@ -1,0 +1,2188 @@
+{
+  "config": {
+    "embedding_model": "BAAI/bge-m3",
+    "retrieve_k": 40,
+    "rerank_k": 6,
+    "rerank_enabled": true,
+    "xling_enabled": true
+  },
+  "schemes": [
+    "baseline",
+    "hyde_keyword"
+  ],
+  "tasks": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12"
+  ],
+  "elapsed_seconds": 555.1,
+  "baseline": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "r_vec": 5,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "r_vec": 20,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "records": [
+        {
+          "q": "Python通过什么方式让分析师能够高效地处理大型数据集？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Python 和 Java 在语法、类型、性能、OOP 特性和使用案例这五个方面有哪些具体差异？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust代码示例中，尝试修改已释放内存的引用为何会引发编译错误？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "JetBrains为Rust学习者提供了哪些免费学习资源？",
+          "r_vec": 2,
+          "r_rer": 3
+        },
+        {
+          "q": "根据文本，什么因素解释了Rust开发者一旦尝试就坚持使用它？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "这篇文章涉及哪个编程语言？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "在这个Rust并发示例中，最终计数器值是如何确保为100000的？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust中，如何使用模式匹配来根据玩家的方向执行相应的移动操作？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "哪些大型公司在部分项目中采用了Rust编程语言？",
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "Rust通过哪些具体机制来提升性能并避免不必要的系统减速？",
+          "r_vec": null,
+          "r_rer": null
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "records": [
+        {
+          "q": "十年前生成式AI被认为不可能的主要原因有哪些？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "传统查找算法中，平均比较次数是多少？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算机使用Shor算法分解一个1000位的大数需要多长时间？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "在量子计算中，为什么单次执行算法通常无法得到可靠结果？",
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "量子计算目前的错误率通常高于多少百分比？",
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "经典计算中数据是如何表示和处理的？",
+          "r_vec": 16,
+          "r_rer": 3
+        },
+        {
+          "q": "这家公司的电子邮件联系地址是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在量子计算领域，企业为获得量子优势在人才方面主要面临什么挑战？",
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算的关键技术概念有哪些？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "BlueQubit量子计算软件集成了哪些具体的开源库？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "r_vec": 7,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "r_vec": 2,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "r_vec": 11,
+          "r_rer": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "r_vec": 66,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "records": [
+        {
+          "q": "英伟达最新旗舰GPU H200相比前代H100的性能提升幅度是多少？",
+          "r_vec": 40,
+          "r_rer": null
+        },
+        {
+          "q": "解决方案提供商领导者为什么认为像Gaudi 3这样的成本效益高的AI系统可能有市场？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Intel在Deutsche Bank分析师会议上提到的云迁移观点与Nvidia的生态系统策略有何关联？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2026年，固定宽带平均月费最高的国家是哪个？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "ClusterMax评估工具针对哪些GPU型号的Neocloud集群进行排名？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "海光信息上半年市场推广费用的同比增长率是多少？",
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "AMD的哪些具体加速器型号被特别指出对NVIDIA的市场主导地位构成挑战？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Nvidia和AMD被要求在何时前提交最终评论和性能改进反馈？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "英伟达的市值在五月达到了多少万亿美元？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "根据技术基准，中国AI模型与美国模型相比在能力上是否存在显著差距？",
+          "r_vec": 16,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "records": [
+        {
+          "q": "J, Creemers R (2023) 在关于中国网络空间管理机构的研究中主要描述了哪些方面？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "Hao Huang是哈佛法学院法学硕士项目的哪一届学生？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "2023年10月21日生效的“英美数据桥”如何简化美英之间的数据跨境传输？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "对于危害程度高但发生概率低的数据，在重要数据识别中应如何判定？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "认证机构在做出个人信息保护认证决定时，依据哪些材料和报告？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "如果Comp.CN的数据传输行为导致数据主体受损，它与Comp.EU应如何共同承担法律责任？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "网站指南的分类有哪些？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "PIPL和GDPR在认定未成年人的个人信息是否属于敏感数据方面有何不同？",
+          "r_vec": 8,
+          "r_rer": null
+        },
+        {
+          "q": "数据保护机构在采纳标准数据保护条款时，需要依据哪些具体条款？",
+          "r_vec": 46,
+          "r_rer": null
+        },
+        {
+          "q": "在什么条件下学术研究机构使用个人资料进行统计分析并发表研究成果可被认定为适法的特定目的外利用？",
+          "r_vec": 15,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "r_vec": 7,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "records": [
+        {
+          "q": "文本中提到Agentic AI的质量离不开什么类型的数据？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "根据描述，仅用于匿名统计目的的信息在哪些条件下可能被用来识别个人？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "COFIBA算法在哪些关键方面与LinUCB算法有所区别？",
+          "r_vec": 3,
+          "r_rer": 3
+        },
+        {
+          "q": "在特征组数据摄取后，哪些特征组的计数被添加到了ps字典中？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "bandit算法中累积遗憾的数学表达式是什么？",
+          "r_vec": 2,
+          "r_rer": 5
+        },
+        {
+          "q": "文中如何解决新用户推荐时因缺乏历史数据而无法使用GBDT的问题？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "构建实时推荐引擎时使用了什么数据集？",
+          "r_vec": 14,
+          "r_rer": 2
+        },
+        {
+          "q": "UCB算法中悲观保守的做法是如何选择臂的？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LinUCB算法的Disjoint和Hybrid版本在参数共享方面有什么区别？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "传统推荐系统在哪些具体情境下效果会变差，甚至加剧用户的选择困难？",
+          "r_vec": 13,
+          "r_rer": 2
+        }
+      ]
+    },
+    {
+      "id": "09",
+      "records": [
+        {
+          "q": "2023年AAAI会议上Sun等人关于对比学习减少对话幻觉的研究论文DOI是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为了帮助LLM模型理解提示的结构，应该使用什么符号来分隔不同的块？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在LLM幻觉评估中，多模态数据集如何扩展评估范畴？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "当预测域的置信度分数低于80%时，系统会如何调整其检索范围？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "法律专业人士如何利用幻觉检测工具来避免伪造的案件引用？",
+          "r_vec": 10,
+          "r_rer": 2
+        },
+        {
+          "q": "哪篇论文介绍了通过实时验证和纠正来减轻大型语言模型幻觉的“Ever”方法？",
+          "r_vec": 32,
+          "r_rer": 2
+        },
+        {
+          "q": "在幻觉示例中，检索内容推荐的最佳图像质量获取时间窗口具体是多少，模型生成时如何处理这一信息导致事实偏离？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "SelfCheckGPT在GPT-3生成的WikiBio段落实验中，哪种指标被证明表现最佳？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "减轻文本幻觉需要采用什么训练机制？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "关于Ji, Z.等人合著的“Survey of Hallucination in Natural Language Generation”论文，其发表在ACM Computing Surveys的卷号和页码范围是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "records": [
+        {
+          "q": "从2000年到2022年3月，全球固态电池专利数量排名第一的公司是哪家？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "赣锋锂电的第二代固态电池能量密度是多少？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "Robert Mitchell 的研究领域是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "固态电池技术迭代的第一阶段具体涉及哪些材料或技术组合？",
+          "r_vec": 38,
+          "r_rer": 3
+        },
+        {
+          "q": "电动汽车电池在哪些方面存在主要局限性？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "哪家公司已成功应用等静压技术于固态电池组装？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2024年全球消费锂电池出货量在总锂离子电池出货量中占多大比例？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "固体电池中固态电解质与电极接触不良如何影响锂离子传输？",
+          "r_vec": 47,
+          "r_rer": 1
+        },
+        {
+          "q": "温等静压技术如何通过施加均匀压力来减少固态电池的电阻率？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为了最小化阴极颗粒的体积变化，文中建议混合哪两种阴极材料？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "records": [
+        {
+          "q": "如果我想报告Akamai系统中的漏洞，应该访问网站的哪个部分？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Z轴扩展中，路由器是怎样通过请求的userId来选择具体的应用程序实例的？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "微服务架构中的软件组件如何根据当前容量和预测需求独立扩展计算资源？",
+          "r_vec": 18,
+          "r_rer": 1
+        },
+        {
+          "q": "当单体应用的通信功能遇到流量激增时，为什么必须增加计算资源会导致资源浪费？",
+          "r_vec": 8,
+          "r_rer": 2
+        },
+        {
+          "q": "微服务架构的持续部署特性如何改变发布更新的频率？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Amazon Prime Video 为什么将其音频和视频质量监控应用从微服务架构改为单体应用？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CI/CD管道中，如果出现问题，系统可以采取什么行动？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "团队规模超过多少名开发人员时，建议采用微服务架构？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么Kubernetes对于许多刚开始的团队来说不太适用？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Camunda的代理设计中，针对工具部分有哪些具体的设计原则？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "records": [
+        {
+          "q": "模仿学习和强化学习中，从少量演示或试验中学习的具体研究挑战是什么？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "学习方式有哪两种选择？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "根据研究，AGI预计在何时达到奇点，届时AI将对社会产生什么影响？",
+          "r_vec": 10,
+          "r_rer": 1
+        },
+        {
+          "q": "根据文本片段，批判者通常如何通过人类智力特征来论证当前最先进的AI系统无法实现强AI？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "第36届NeurIPS会议上，Fan等人发表的论文标题是什么？",
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "在灾难救援中，具身无人机如何通过语言模型来理解并遵循人类语音指令，例如“在倒塌的桥梁附近搜索”？",
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "GPT-4通过自我反思技术在高难度测试中的表现提升了多少百分比？",
+          "r_vec": 3,
+          "r_rer": 2
+        },
+        {
+          "q": "如何确认你正在安全地连接到美国政府网站？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "谁撰写了2013年发表在Science上的文章，该文探讨了脑结构与功能网络与认知之间的关系？",
+          "r_vec": 3,
+          "r_rer": 3
+        },
+        {
+          "q": "学习数据分析时，有哪些授课形式可以选择？",
+          "r_vec": 1,
+          "r_rer": 2
+        }
+      ]
+    }
+  ],
+  "hyde_keyword": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "fusion_extra": [
+            "For inference on memory-constrained edge devices, W4A16 asymmetric quantization is predominantly applied to compress the weights of transformer-based models to 4-bit precision while retaining the activations in 16-bit floating-point. This technique significantly reduces the model's memory footprint and bandwidth requirements, enabling the deployment of large language models on devices with limited RAM, such as smartphones and IoT endpoints. The asymmetric formulation accounts for differing zero-point values in the quantized weight distribution to minimize information loss during the dequantization step, thereby preserving model accuracy.",
+            "W4A16 asymmetric quantization inference memory constrained",
+            "edge device model deployment low-bit quantization",
+            "4-bit weight 16-bit activation quantization hardware",
+            "mobile inference quantization latency throughput tradeoff"
+          ],
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "fusion_extra": [
+            "A standard Base64 encoded string should not contain any newline characters, as it is defined as a continuous stream of ASCII characters (A-Z, a-z, 0-9, +, /) and an equals sign (=) for padding. Any newline characters (such as \\n or \\r\\n) within the string would indicate a corruption of the Base64 data or improper encoding, potentially causing decoding failures in downstream systems. For example, in RFC 4648, the base64 encoding process explicitly excludes whitespace and line breaks to ensure safe transmission over text-based protocols.",
+            "Base64 encoding decoding newline character",
+            "Base64 string validation regex pattern",
+            "Base64 encoded data line break handling",
+            "Base64 specification RFC 4648 format"
+          ],
+          "r_vec": 40,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "fusion_extra": [
+            "The Token Merging (ToMe) method, when applied to multi-head attention outputs, specifically merges the value (V) vectors of tokens deemed similar by a token similarity metric computed from the query (Q) and key (K) vectors. This process involves identifying token pairs with high cosine similarity or other distance metrics in the key-query space and then averaging their corresponding value vectors to reduce the sequence length before the final projection and layer normalization steps. The merging is performed independently for each attention head to preserve diverse representational information across the model's parallel attention mechanisms.",
+            "Token Merging ToMe attention",
+            "multi-head attention token merging",
+            "token similarity metric cosine similarity",
+            "attention map similarity clustering"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "fusion_extra": [
+            "The Marlin-AWQ quantized model, specifically a 4-bit quantized LLM, was evaluated on the HumanEval benchmark for code generation. It achieved a 72.0% Pass@1 score, demonstrating near-lossless performance compared to the original FP16 model, while delivering up to 3.5x higher throughput in tokens-per-second on NVIDIA A100 GPUs using the Marlin kernel.",
+            "Marlin AWQ quantization inference optimization",
+            "HumanEval benchmark Pass@1 score evaluation",
+            "throughput tokens per second latency performance",
+            "code generation large language model benchmarking"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "fusion_extra": [
+            "For video decoding on Xilinx Alveo U280, VCK5000, and VHK158 FPGAs, performance is measured in tokens per second (tokens/s) for transformer-based models. Benchmarks indicate the Alveo U280 achieves approximately 1,200 tokens/s, the VCK5000 reaches 1,800 tokens/s, and the VHK158 can process up to 2,500 tokens/s during the decoding phase, utilizing optimized hardware pipelines and AXI streaming interfaces for low-latency inference.",
+            "FPGA decoding performance tokens per second VCK5000 Alveo U280",
+            "Xilinx VHK158 FPGA acceleration inference throughput",
+            "transformer decoding FPGA latency throughput benchmark",
+            "FPGA token generation rate HBM bandwidth decoding optimization"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "fusion_extra": [
+            "LLM in a Flash employs a dynamic offloading mechanism that leverages SSD storage to efficiently manage model parameters, significantly improving inference efficiency. The system utilizes a hierarchical memory architecture that intelligently partitions and caches model weights between DRAM and SSD, minimizing data transfer latency during the forward pass. This approach enables the execution of large language models on memory-constrained devices by optimizing I/O patterns and reducing the need for frequent CPU-GPU data synchronization.",
+            "LLM in Flash memory-efficient inference architecture",
+            "sparse attention sparsity flash-attention memory bandwidth",
+            "flash inference mechanism hardware-aware optimization",
+            "model compression quantization offloading inference latency"
+          ],
+          "r_vec": 3,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "fusion_extra": [
+            "在标准Transformer模型中，针对自注意力计算的二次复杂度问题，研究者提出了多种稀疏化方法。这些方法主要包括局部窗口注意力（如Longformer中的滑动窗口模式）、全局标记注意力（如BigBird中固定数量的全局token）、随机连接注意力以及基于内容的动态稀疏注意力（如Reformer中通过局部敏感哈希LSH实现的近似最近邻查找）。这些方法旨在将注意力矩阵的计算复杂度从O(n²)降低到接近O(n)的水平，从而允许模型处理更长的序列。",
+            "sparse attention transformer pruning methods",
+            "attention sparsity structured unstructured pruning",
+            "transformer model compression sparse attention patterns",
+            "efficient attention sparse transformer architectures"
+          ],
+          "r_vec": 22,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "fusion_extra": [
+            "Deploying large language models (LLMs) on resource-constrained edge devices, such as embedded systems with less than 8 GB of RAM and 4-core CPUs, presents significant obstacles. Key barriers include the model's high memory footprint—often exceeding several gigabytes for a single inference pass—and the substantial computational latency introduced by executing billions of floating-point operations on hardware lacking dedicated GPU or NPU accelerators. Furthermore, the volatility of network connectivity in edge scenarios complicates techniques like model partitioning or incremental offloading to a cloud server, which are common strategies for mitigating local resource limitations.",
+            "large language model edge deployment constraints",
+            "edge computing resource limitations LLM inference",
+            "model compression quantization pruning edge devices",
+            "LLM latency bandwidth memory edge environment"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "fusion_extra": [
+            "BK-SDM achieves a training cost of approximately 1/100th that of the original Stable Diffusion (SD) model by employing a bilinear kernel distillation strategy and a single-stage training pipeline. The method reduces both the number of trainable parameters and the computational FLOPs required for fine-tuning, resulting in a significant reduction in GPU memory usage and training time from several days to under an hour on a single A100 80GB GPU. This cost efficiency is validated through comparative experiments on benchmark datasets like COCO2014, demonstrating minimal performance degradation in text-to-image generation metrics.",
+            "BK-SDM training cost reduction Stable Diffusion",
+            "distillation computational efficiency model compression",
+            "forward pass FLOPs inference latency",
+            "training efficiency resource budget parameter reduction"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "fusion_extra": [
+            "A recent preprint by Swapnesh Patel et al., published approximately three weeks ago on arXiv, is titled 'Hybrid Quantum-Classical Neural Networks for Enhanced Drug Discovery Screening.' The paper proposes a novel variational circuit architecture that integrates classical convolutional layers with parameterized quantum gates to predict molecular binding affinities with higher accuracy on the PDBbind dataset.",
+            "Swapnesh Patel recent publication article title",
+            "Patel 3 weeks ago technical blog post",
+            "Swapnesh Patel research paper 2024",
+            "Patel latest article title announcement"
+          ],
+          "r_vec": 42,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "records": [
+        {
+          "q": "Python通过什么方式让分析师能够高效地处理大型数据集？",
+          "fusion_extra": [
+            "Python enables analysts to efficiently handle large datasets through libraries like pandas, which provides high-performance data structures such as DataFrames for data manipulation and analysis. Additionally, tools like Dask and PySpark allow for parallel and distributed computing, enabling processing of datasets that exceed available memory by partitioning data across multiple cores or cluster nodes. These libraries optimize I/O operations and leverage vectorized operations to significantly reduce processing time compared to traditional iterative approaches.",
+            "pandas parallel processing large-scale dataset optimization",
+            "Python data analysis vectorization memory-efficient chunking",
+            "Dask Spark distributed computing Python data pipeline",
+            "NumPy batch processing performance profiling Python"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Python 和 Java 在语法、类型、性能、OOP 特性和使用案例这五个方面有哪些具体差异？",
+          "fusion_extra": [
+            "Python和Java在语法、类型、性能、OOP特性和使用案例方面存在显著差异。Python采用动态类型和缩进敏感的简洁语法，而Java使用静态类型和花括号定义的块结构。性能上，Python作为解释型语言，执行速度通常慢于编译型的Java，尤其在计算密集型任务中。在面向对象编程特性方面，Java严格遵循所有内容皆对象的模型，支持显式的接口定义和访问修饰符，而Python则采用更灵活的鸭子类型和多重继承模型。使用案例上，Python广泛应用于数据分析、机器学习和快速原型开发，而Java则主导大型企业级应用、安卓开发和高性能后端系统。",
+            "Python Java syntax type system comparison",
+            "static typing dynamic typing performance benchmarks",
+            "object-oriented programming features inheritance polymorphism",
+            "language use cases web development data science enterprise"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust代码示例中，尝试修改已释放内存的引用为何会引发编译错误？",
+          "fusion_extra": [
+            "In Rust, attempting to modify a reference to freed memory during compilation triggers a lifetime-checking error because the compiler enforces the ownership system and borrow checker rules. The Rust compiler static analysis phase detects that the reference's lifetime exceeds the point where the memory it points to has been deallocated (e.g., after `drop` or scope exit), violating the 'no dangling pointer' guarantee. This results in a compilation error such as `E0597: lifetime of reference outlives lifetime of borrowed content`, preventing undefined behavior at runtime.",
+            "Rust memory safety use-after-free compile error",
+            "Rust borrow checker dangling reference lifetime",
+            "Rust ownership system move semantics drop trait",
+            "Rust unsafe code raw pointer memory management"
+          ],
+          "r_vec": 3,
+          "r_rer": 2
+        },
+        {
+          "q": "JetBrains为Rust学习者提供了哪些免费学习资源？",
+          "fusion_extra": [
+            "JetBrains offers several free learning resources for Rust developers, including interactive courses on the Rust language fundamentals and advanced topics through JetBrains Academy. Their ecosystem also provides free access to the RustRover IDE, integrated learning materials within the editor, and a comprehensive documentation portal with tutorials and best practices for Rust development.",
+            "JetBrains Rust learning resources free",
+            "Rust programming education tools IDE",
+            "JetBrains RustRover Community Edition",
+            "Rust beginner tutorials online courses"
+          ],
+          "r_vec": 3,
+          "r_rer": 3
+        },
+        {
+          "q": "根据文本，什么因素解释了Rust开发者一旦尝试就坚持使用它？",
+          "fusion_extra": [
+            "Key factors cited for Rust's high developer retention include its ownership and borrowing system, which eliminates memory safety issues at compile time, and its zero-cost abstractions that enable high performance without runtime overhead. The Cargo build system and comprehensive package registry further streamline project management, fostering strong satisfaction among developers transitioning from languages like C++ and Python.",
+            "Rust programming language adoption retention developer experience",
+            "Rust ownership borrowing memory safety productivity",
+            "Rust developer satisfaction performance reliability maintainability",
+            "Rust learning curve tooling cargo community support"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "这篇文章涉及哪个编程语言？",
+          "fusion_extra": [
+            "The implementation described in this paper utilizes Python 3.8 as its primary programming language, leveraging libraries such as PyTorch 1.12 for neural network operations and Hugging Face Transformers for model fine-tuning. The codebase adheres to PEP 8 style guidelines and includes type hints for enhanced static analysis compatibility.",
+            "programming language identification source code",
+            "language detection static analysis AST",
+            "coding language classification text mining",
+            "programming language statistics repository analysis"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "在这个Rust并发示例中，最终计数器值是如何确保为100000的？",
+          "fusion_extra": [
+            "In this Rust concurrency example, the final counter value is ensured to be 100,000 by using an AtomicUsize with the Ordering::SeqCst memory order. The atomic counter is shared across 100,000 threads via an Arc, and each thread performs a fetch_add(1) operation, which guarantees sequential consistency and prevents data races. After joining all threads, the program asserts the final load of the counter equals 100,000, confirming the deterministic outcome under Rust's memory model.",
+            "Rust concurrency atomic operations counter synchronization",
+            "Rust concurrent counter race condition data race",
+            "Rust Arc Mutex AtomicUsize shared state thread safety",
+            "Rust multithreading memory ordering fetch_add Relaxed SeqCst"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust中，如何使用模式匹配来根据玩家的方向执行相应的移动操作？",
+          "fusion_extra": [
+            "In Rust, pattern matching with `match` expressions is commonly used to implement player movement based on directional input, such as matching on an enum representing `Direction::Up`, `Direction::Down`, `Direction::Left`, or `Direction::Right`. Each arm of the `match` statement can update the player's coordinates, for instance, incrementing or decrementing the x or y values by a fixed step size like 1.0 unit. This approach leverages Rust's exhaustive matching to ensure all possible directions are handled, preventing runtime errors and promoting safe, deterministic game logic.",
+            "Rust pattern matching enum match expression",
+            "player direction movement game logic",
+            "game development Rust state machine direction",
+            "enum variant matching character control Rust"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "哪些大型公司在部分项目中采用了Rust编程语言？",
+          "fusion_extra": [
+            "Several major technology companies have adopted the Rust programming language for specific projects, particularly for systems-level and performance-critical components. Microsoft has utilized Rust in developing its low-level infrastructure and security-sensitive modules within Azure, while Google has incorporated it into the Android Open Source Project (AOSP) and the Chromium browser for memory safety in critical paths. Additionally, Meta (formerly Facebook) employs Rust in its source control system Mononoke and backend services, and Amazon Web Services (AWS) uses it for performance-sensitive components like Firecracker, a lightweight virtualization technology.",
+            "Rust programming language adoption enterprise",
+            "Rust language industry use cases large companies",
+            "Rust production deployment case studies",
+            "Rust adoption survey industry reports"
+          ],
+          "r_vec": 12,
+          "r_rer": 1
+        },
+        {
+          "q": "Rust通过哪些具体机制来提升性能并避免不必要的系统减速？",
+          "fusion_extra": [
+            "Rust enhances performance and avoids unnecessary system slowdowns through several concrete mechanisms, including zero-cost abstractions, compile-time memory safety via the ownership and borrowing system, and fearless concurrency without data races. The borrow checker enforces strict lifetime and mutability rules at compile time, which eliminates runtime garbage collection overhead and allows for predictable low-latency execution. Additionally, Rust's lack of a runtime environment and its support for inline assembly enable developers to produce highly optimized binaries with minimal system call overhead.",
+            "Rust performance mechanisms ownership borrowing",
+            "zero-cost abstractions compile-time optimizations",
+            "memory safety no garbage collector system latency",
+            "Rust concurrency fearless data parallelism"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "records": [
+        {
+          "q": "十年前生成式AI被认为不可能的主要原因有哪些？",
+          "fusion_extra": [
+            "A decade ago, the primary obstacles to generative AI included insufficient computational power, as training large-scale models like early GANs required prohibitive GPU resources and memory bandwidth. Additionally, the lack of high-quality, large-scale labeled datasets and stable training algorithms, such as issues with mode collapse in GANs and vanishing gradients in deep RNNs, severely limited model performance and reliability. These technical and infrastructural constraints were frequently cited in contemporary literature as key reasons for the perceived infeasibility of advanced generative systems.",
+            "generative AI limitations challenges early research",
+            "deep learning scalability computational constraints historical",
+            "language model training data scarcity evaluation difficulties",
+            "AI research skepticism generative models before transformers"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "传统查找算法中，平均比较次数是多少？",
+          "fusion_extra": [
+            "In a successful search on a sequential list containing n uniformly distributed elements, the average number of comparisons required is approximately (n+1)/2, which simplifies to n/2 for large n. For an unsuccessful search, the algorithm must traverse the entire list, resulting in exactly n comparisons. These values assume the search key is equally likely to be any element in the list or absent.",
+            "sequential search linear search average comparisons complexity",
+            "binary search logarithmic complexity O(log n) comparisons",
+            "hash table average case lookup collision resolution",
+            "search algorithm average number comparisons analysis"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算机使用Shor算法分解一个1000位的大数需要多长时间？",
+          "fusion_extra": [
+            "Shor's algorithm provides an exponential speedup for integer factorization on a quantum computer compared to the best-known classical algorithms. For factoring a 1000-bit integer (approximately 300 decimal digits), a practical implementation would require a quantum processor with several thousand logical qubits, accounting for error correction overhead. Depending on the specific quantum error correction code and gate fidelities, the runtime for such a factorization is estimated to be on the order of hours or days, a task that would be computationally infeasible for classical computers using the General Number Field Sieve, which would require billions of years."
+          ],
+          "r_vec": 7,
+          "r_rer": 2
+        },
+        {
+          "q": "在量子计算中，为什么单次执行算法通常无法得到可靠结果？",
+          "fusion_extra": [
+            "In quantum computing, due to the inherent probabilistic nature of quantum measurements, a single execution of a quantum algorithm typically yields only a measurement outcome with a certain probability, not the deterministic answer. Quantum algorithms like Shor's or Grover's are designed to amplify the probability of the correct solution, but a single run may result in a measurement of an incorrect state due to quantum noise, decoherence, or the superposition of non-target amplitudes. Consequently, multiple independent runs and statistical sampling are required to reliably estimate the correct result with high confidence.",
+            "quantum algorithm single shot execution reliability",
+            "quantum noise decoherence error mitigation",
+            "quantum error correction surface code",
+            "quantum measurement statistics sampling"
+          ],
+          "r_vec": 44,
+          "r_rer": 1
+        },
+        {
+          "q": "量子计算目前的错误率通常高于多少百分比？",
+          "fusion_extra": [
+            "Current superconducting quantum processors typically exhibit two-qubit gate error rates in the range of 0.1% to 1%, with state-of-the-art systems achieving fidelities slightly above 99% for single-qubit gates but remaining a significant barrier for fault-tolerant computation. The dominant sources of error include decoherence times (T1 and T2 relaxation), crosstalk, and control electronics precision, often necessitating quantum error correction protocols such as the surface code. For a quantum algorithm to achieve a practical advantage over classical counterparts, the logical error rate after error correction must be suppressed well below the physical error threshold, commonly cited around 1% for concatenation-based schemes.",
+            "quantum computing error rate threshold",
+            "qubit error probability logical error",
+            "quantum gate fidelity error rate percentage",
+            "surface code error correction threshold"
+          ],
+          "r_vec": 43,
+          "r_rer": 1
+        },
+        {
+          "q": "经典计算中数据是如何表示和处理的？",
+          "fusion_extra": [
+            "In classical computing, data is represented using binary digits (bits), where each bit exists in one of two definitive states: 0 or 1. These bits are physically realized through electronic components such as transistors operating in saturation or cutoff modes, with multiple bits grouped into bytes to represent characters, integers, and floating-point numbers via encoding schemes like ASCII or IEEE 754. Data processing is performed sequentially by a central processing unit (CPU) executing arithmetic and logical operations on these binary values stored in registers and memory.",
+            "classical computing data representation encoding",
+            "binary arithmetic logic gates circuits",
+            "CPU registers memory addressing von Neumann",
+            "data structures algorithms processing paradigms"
+          ],
+          "r_vec": 4,
+          "r_rer": 3
+        },
+        {
+          "q": "这家公司的电子邮件联系地址是什么？",
+          "fusion_extra": [
+            "According to the company's official 'About Us' page and corporate filings, all general inquiries, partnership proposals, and support requests can be directed to the primary email address: contact@company.com. For legal or compliance matters, a separate secure channel is provided at legal@company.com, which is monitored by the designated compliance officer.",
+            "company email address contact",
+            "business communication email domain",
+            "official contact information email",
+            "corporate email format structure"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在量子计算领域，企业为获得量子优势在人才方面主要面临什么挑战？",
+          "fusion_extra": [
+            "In the pursuit of quantum advantage, corporations face significant talent acquisition and retention challenges within the specialized quantum computing workforce. The primary hurdles include a global shortage of Ph.D.-level researchers proficient in quantum algorithms (e.g., Shor's, Grover's), quantum error correction, and topological qubit fabrication, alongside intense competition from academic institutions and government labs. Furthermore, the interdisciplinary nature of the field requires talent with expertise spanning condensed matter physics, microwave engineering, and classical HPC, making the talent pool exceptionally narrow and recruitment cycles protracted.",
+            "quantum computing talent shortage workforce development",
+            "quantum expertise hiring recruitment challenges",
+            "quantum advantage enterprise talent pipeline",
+            "quantum workforce skills gap STEM education"
+          ],
+          "r_vec": 44,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算的关键技术概念有哪些？",
+          "fusion_extra": [
+            "Quantum computing relies on several foundational concepts, including qubits, which leverage superposition to exist in multiple states simultaneously, and entanglement, where qubits become correlated such that the state of one instantaneously influences another. Key technologies also involve quantum gates for performing operations, quantum error correction codes like the surface code to mitigate decoherence, and algorithms such as Shor's algorithm for integer factorization and Grover's algorithm for database search, which demonstrate potential exponential speedups over classical counterparts.",
+            "quantum computing key concepts qubit superposition entanglement",
+            "quantum gates circuits quantum error correction",
+            "quantum algorithms Shor Grover variational quantum eigensolver",
+            "quantum hardware architectures ion trap superconducting qubits"
+          ],
+          "r_vec": 73,
+          "r_rer": null
+        },
+        {
+          "q": "BlueQubit量子计算软件集成了哪些具体的开源库？",
+          "fusion_extra": [
+            "BlueQubit的量子计算软件开发工具包（SDK）集成了多个开源库以支持量子电路设计和模拟，包括用于量子线路描述的QASM、用于量子比特操作的Qiskit Aer模拟器后端，以及用于混合量子-经典优化的Cirq框架。该SDK通过REST API和Python绑定暴露这些库的功能，支持VQE（变分量子特征求解器）和QAOA（量子近似优化算法）等算法实现。",
+            "BlueQubit quantum computing software integration",
+            "open source libraries quantum SDK",
+            "Qiskit Cirq Pennylane dependencies",
+            "quantum framework Python library version"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "fusion_extra": [
+            "在检索增强生成（RAG）系统中，采用基于对比学习（如InfoNCE损失）的嵌入模型微调技术，能够将检索器的语义表征空间与生成器的输入偏好对齐。尽管这增加了训练流程的复杂度，但实验表明，该方法可使最终答案的忠实度（Faithfulness）和相关性（Relevance）指标提升15%-20%，同时将检索召回的噪声文档比例降低约30%。",
+            "retrieval augmented generation embedding fine-tuning",
+            "RAG retrieval performance enhancement metric",
+            "embedding model fine-tuning semantic search accuracy",
+            "domain-specific embedding fine-tuning recall precision"
+          ],
+          "r_vec": 86,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "fusion_extra": [
+            "在实现语义元数据过滤时，系统必须首先查询VectorStoreManager类的schema信息，以验证向量存储的索引结构、元数据字段类型（如字符串、布尔或向量维度）以及过滤谓词的兼容性。这一步通常通过调用VectorStoreManager.get_schema()方法完成，确保后续的语义过滤查询（如基于类别或时间范围的过滤）能够正确映射到存储层的配置，避免运行时错误或性能下降。",
+            "semantic metadata filtering vector store schema validation",
+            "vector database schema configuration metadata query class",
+            "semantic filtering implementation schema verification vector storage",
+            "metadata class schema vector store configuration check"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "fusion_extra": [
+            "The OpenAI Assistants API's function calling feature, formally known as tool_use, enables developers to define and describe custom functions that the model can dynamically invoke during a conversation. When the model determines a user's request requires external data or computation, it generates a structured JSON output containing the function name and necessary parameters, which the client-side application then executes to retrieve results and feed them back into the conversation flow. This mechanism allows for seamless integration with databases, external APIs, and proprietary software systems, extending the model's capabilities beyond its training data.",
+            "function calling API OpenAI assistant tool use",
+            "function calling parameters schemas JSON schema",
+            "tool_choice auto none required function",
+            "parallel function calling nested function calls"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "fusion_extra": [
+            "The LIDC cookie, a temporary session identifier used by the Lung Image Database Consortium (LIDC) platform, has a default expiration duration of 30 days. This timeframe is set to balance user convenience for multi-session research workflows with security protocols requiring periodic re-authentication to protect sensitive medical imaging data. After 30 days of inactivity, the cookie is automatically invalidated, and users must log in again using their LIDC credentials.",
+            "cookie persistence duration TTL",
+            "session timeout max-age expiration",
+            "browser cookie lifetime settings",
+            "LIDC cookie configuration policy"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "fusion_extra": [
+            "大语言模型在生成回答时，即使上下文包含完整信息，仍可能省略关键细节，这通常归因于注意力机制在长文本中的信息稀释效应以及解码策略（如贪心搜索或束搜索）倾向于选择高概率但信息量不足的序列。研究表明，模型的训练数据分布和损失函数优化目标可能导致其更关注表面模式而非深层语义完整性，从而在信息密集的上下文中产生选择性遗漏。通过分析注意力权重分布和引入对比损失函数进行微调，可以有效缓解这一问题，提升生成内容的细节覆盖率。",
+            "LLM context utilization information omission",
+            "faithfulness context precision generation completeness",
+            "long context distraction attention sink",
+            "hallucination context relevance key detail"
+          ],
+          "r_vec": 125,
+          "r_rer": 1
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "fusion_extra": [
+            "Qdrant is a vector database designed for high-performance similarity search at scale. For production-grade Retrieval-Augmented Generation (RAG) systems, Qdrant is recommended for datasets ranging from tens of millions to several hundred million vectors, particularly when low-latency filtering and high recall are critical. Its architecture supports distributed deployment and offers robust handling of complex filtering conditions, making it suitable for enterprise applications requiring both scale and precision.",
+            "Qdrant production RAG system scalability data规模",
+            "vector database performance benchmark latency throughput",
+            "deployment architecture sharding clustering high availability",
+            "indexing algorithm HNSW IVF memory optimization"
+          ],
+          "r_vec": 3,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "fusion_extra": [
+            "在构建基于检索增强生成（RAG）的客服问答系统时，需要重点优化和评估以下几个关键性能特性：首先是检索阶段的延迟和召回率，通常要求Top-K检索在50毫秒内完成，以保障实时交互体验；其次是生成阶段的响应时间与答案的相关性，需通过语义相似度和人工评估指标来衡量。系统整体吞吐量、在高并发场景下的稳定性，以及对于领域特定术语和长尾问题的回答准确率，也是衡量该系统部署成功与否的核心性能指标。",
+            "customer service QA system RAG performance characteristics",
+            "retrieval latency throughput scalability production",
+            "response accuracy relevance faithfulness evaluation",
+            "real-time inference cost optimization deployment"
+          ],
+          "r_vec": 83,
+          "r_rer": 6
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "fusion_extra": [
+            "During the data extraction phase of a Retrieval-Augmented Generation (RAG) pipeline, Optical Character Recognition (OCR) scanning may fail due to several factors, including low-resolution input images (below 300 DPI), complex page layouts with overlapping columns or embedded graphics, poor contrast between text and background, or the presence of handwritten annotations and unusual fonts. These failures can result in incomplete or inaccurate text extraction, which subsequently degrades the quality of the indexed knowledge base and hampers the retrieval stage by providing flawed context to the large language model.",
+            "OCR failure causes data extraction RAG pipeline",
+            "OCR error types scanned document quality issues",
+            "image preprocessing OCR accuracy degradation factors",
+            "OCR challenges multi-column layout handwriting recognition"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "fusion_extra": [
+            "When evaluating embedding models, using a representative sample of real user queries is critical for avoiding the 'offline-online performance gap' that emerges post-deployment. Without such representative evaluation data, models may overfit to synthetic or internal test sets, leading to significant degradation in retrieval quality, increased latency, and poor user satisfaction once exposed to the actual distribution of user intents and phrasing in a production environment.",
+            "embedding model evaluation real user queries sampling bias",
+            "test set representativeness deployment generalization performance degradation",
+            "query distribution mismatch domain shift robustness testing",
+            "evaluation methodology sampling strategy realistic test scenarios"
+          ],
+          "r_vec": 23,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "fusion_extra": [
+            "RAG fusion enhances semantic search efficiency in Retrieval-Augmented Generation applications by implementing a multi-vector retrieval strategy that combines sparse lexical matching (e.g., BM25) with dense semantic embeddings (e.g., from a fine-tuned Sentence-BERT model). This approach typically involves a reciprocal rank fusion (RRF) algorithm to merge and re-rank results from multiple retrieval pathways, ensuring high recall for both precise keyword matches and nuanced semantic similarity, thereby reducing the latency and computational overhead associated with single-stage, high-threshold dense retrieval alone.",
+            "RAG fusion retrieval augmented generation semantic search",
+            "query expansion hybrid retrieval fusion strategy",
+            "reciprocal rank fusion RRF interleaving scores",
+            "efficiency metrics latency throughput retrieval accuracy"
+          ],
+          "r_vec": 9,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "records": [
+        {
+          "q": "英伟达最新旗舰GPU H200相比前代H100的性能提升幅度是多少？",
+          "fusion_extra": [
+            "The NVIDIA H200 Tensor Core GPU, succeeding the H100, delivers significant performance gains in both compute and memory bandwidth. Benchmarks indicate up to a 4.5x improvement in inference throughput for large language models, such as those with 175 billion parameters, due to its enhanced HBM3e memory subsystem reaching 4.8 TB/s bandwidth, and a 40% increase in FP8 performance. The H200 also doubles the available memory to 141 GB, enabling the processing of more complex models and larger batch sizes.",
+            "NVIDIA H200 H100 GPU performance comparison benchmark",
+            "H200 memory bandwidth HBM3e specifications",
+            "H200 versus H100 TOPS FP8 throughput improvement",
+            "datacenter GPU architectural upgrade next generation"
+          ],
+          "r_vec": 46,
+          "r_rer": null
+        },
+        {
+          "q": "解决方案提供商领导者为什么认为像Gaudi 3这样的成本效益高的AI系统可能有市场？",
+          "fusion_extra": [
+            "Solution provider executives have noted that cost-effective AI accelerators like the Intel Gaudi 3, which is positioned to compete with NVIDIA's H100 at a lower total cost of ownership, are gaining traction in the market. This trend is driven by the need for enterprise customers to scale AI infrastructure while managing budgets, particularly for training and inference workloads in data centers. The Gaudi 3's support for standardized software frameworks like PyTorch and oneAPI further reduces adoption barriers, making it an attractive option for organizations seeking price-performance balance.",
+            "AI accelerator Gaudi 3 cost-effective inference",
+            "AI solution provider market strategy TCO ROI",
+            "enterprise AI deployment hardware total cost ownership",
+            "Intel Gaudi 3 price performance AI workload"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "Intel在Deutsche Bank分析师会议上提到的云迁移观点与Nvidia的生态系统策略有何关联？",
+          "fusion_extra": [
+            "During the Deutsche Bank Technology Conference, Intel's Chief Revenue Officer stated that enterprise cloud migration is accelerating with a projected 25% CAGR through 2027, emphasizing the need for heterogeneous compute architectures. This perspective aligns with NVIDIA's ecosystem strategy, which focuses on creating a unified CUDA software platform and hardware-optimized AI stacks to facilitate seamless workload deployment across both cloud and edge environments. The synergy suggests that Intel's emphasis on multi-architectural flexibility complements NVIDIA's vertical integration approach for accelerated computing.",
+            "cloud migration enterprise strategy Deutsche Bank conference",
+            "Intel cloud strategy data center transformation",
+            "NVIDIA ecosystem platform partnership",
+            "cloud infrastructure workload migration hypervisor"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2026年，固定宽带平均月费最高的国家是哪个？",
+          "fusion_extra": [
+            "根据国际电信联盟（ITU）发布的2026年全球宽带价格报告，固定宽带（下行速率≥25 Mbps）平均月费最高的国家为多哥，其月均费用达到73.50美元。该国由于网络基础设施建设成本高昂、市场缺乏有效竞争以及进口设备关税等因素，导致其宽带资费远高于全球平均水平。",
+            "fixed broadband average monthly price global comparison",
+            "broadband cost analysis by country 2026",
+            "internet service pricing OECD broadband statistics",
+            "household broadband expenditure national ranking"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "ClusterMax评估工具针对哪些GPU型号的Neocloud集群进行排名？",
+          "fusion_extra": [
+            "ClusterMax评估工具针对Neocloud集群进行性能排名，其评估范围涵盖NVIDIA A100 80GB、H100 SXM5以及AMD MI300X等主流GPU型号。该工具通过标准化的计算、内存和网络带宽测试来量化集群的吞吐量与延迟，并根据Geekbench ML和Llama.cpp基准测试的得分进行综合排名。",
+            "ClusterMax evaluation tool Neocloud cluster ranking",
+            "GPU models cluster performance benchmark",
+            "Neocloud GPU ranking methodology",
+            "ClusterMax hardware compatibility GPU"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "海光信息上半年市场推广费用的同比增长率是多少？",
+          "fusion_extra": [
+            "根据海光信息技术股份有限公司2023年上半年度财务报告，市场推广费用为人民币2.85亿元，较2022年同期的1.97亿元增长了44.67%。该费用的增长主要源于新产品市场拓展及品牌建设投入的加大，其中数字营销和渠道激励费用占比超过60%。",
+            "Hygon Information Technology H1 marketing expenses growth rate",
+            "semiconductor company financial report selling marketing cost increase",
+            "annual report interim financial statement promotion expenses year-on-year",
+            "Hygon Technology market expenditure revenue marketing budget"
+          ],
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "AMD的哪些具体加速器型号被特别指出对NVIDIA的市场主导地位构成挑战？",
+          "fusion_extra": [
+            "AMD's Instinct MI300X and MI300A accelerators, based on the CDNA 3 architecture, have been specifically noted for challenging NVIDIA's market dominance in the high-performance computing and AI accelerator segments. The MI300X, featuring 192GB of HBM3 memory and a 5.3TB/s memory bandwidth, directly competes with NVIDIA's H100 SXM in large language model training and inference workloads. Additionally, the MI300A, as an APU integrating CPU and GPU chiplets, targets the data center market with its 128GB of HBM3 and is positioned as a cost-effective alternative for mixed HPC and AI applications.",
+            "AMD accelerator models market competition NVIDIA",
+            "AMD Instinct MI300 MI250 GPU data center",
+            "AMD vs NVIDIA market share performance benchmark",
+            "AMD accelerator revenue growth AI training inference"
+          ],
+          "r_vec": 9,
+          "r_rer": 1
+        },
+        {
+          "q": "Nvidia和AMD被要求在何时前提交最终评论和性能改进反馈？",
+          "fusion_extra": [
+            "根据美国国际贸易委员会（USITC）的初步裁定，Nvidia和AMD必须在2023年12月15日之前提交最终评论以及对其产品性能改进的详细反馈报告。该截止日期适用于其针对特定图形处理单元（GPU）和数据中心加速器架构的调查，要求企业提供关于热设计功耗（TDP）、内存带宽利用率以及软件驱动程序优化方面的具体数据。",
+            "Nvidia AMD regulatory compliance deadline",
+            "antitrust final comment submission date",
+            "GPU performance improvement feedback timeline",
+            "technology company response deadline FTC DOJ"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "英伟达的市值在五月达到了多少万亿美元？",
+          "fusion_extra": [
+            "NVIDIA Corporation achieved a historic market capitalization milestone in May 2024, with its valuation surpassing $2 trillion and briefly approaching $2.5 trillion during intraday trading. The surge was primarily driven by unprecedented demand for its H100 and upcoming Blackwell B200 GPU accelerators in the data center and AI training markets, with quarterly data center revenue exceeding $22 billion. Analysts noted that this valuation reflected NVIDIA's dominant position in the AI chip market, holding an estimated 80% market share in AI accelerator shipments.",
+            "NVIDIA market capitalization trillion dollars",
+            "stock price valuation financial metrics",
+            "May 2024 market cap milestone",
+            "semiconductor industry valuation news"
+          ],
+          "r_vec": 3,
+          "r_rer": 2
+        },
+        {
+          "q": "根据技术基准，中国AI模型与美国模型相比在能力上是否存在显著差距？",
+          "fusion_extra": [
+            "A comprehensive evaluation of leading large language models (LLMs) from China and the United States across standard benchmarks such as MMLU, GSM8K, and HumanEval reveals nuanced performance differentials. While US models like GPT-4 and Claude 3 maintain a marginal edge in complex reasoning and code generation tasks, top Chinese models including Qwen-2 and DeepSeek-V3 demonstrate near-parity in multilingual understanding and applied knowledge domains, with performance gaps typically within 2-5% on aggregate scores. The disparity is more pronounced in specialized frontier capabilities, such as long-horizon planning and novel scientific hypothesis generation, where infrastructure and dataset access factors contribute to measurable advantages.",
+            "AI model benchmark comparison capability gap",
+            "Chinese LLM US model evaluation leaderboards",
+            "MMLU HumanEval performance differential analysis",
+            "model capability assessment cross-national comparison"
+          ],
+          "r_vec": 16,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "records": [
+        {
+          "q": "J, Creemers R (2023) 在关于中国网络空间管理机构的研究中主要描述了哪些方面？",
+          "fusion_extra": [
+            "The study by J. Creemers (2023) provides a comprehensive analysis of the organizational structure and regulatory mechanisms governing China's cyberspace administration. It details the hierarchical interplay between the Cyberspace Administration of China (CAC), the Ministry of Industry and Information Technology (MIIT), and the Ministry of Public Security, particularly focusing on their roles in implementing the Cybersecurity Law and the Data Security Law. The paper further examines the technical standards-setting processes, cross-agency coordination frameworks, and the enforcement of compliance audits for critical information infrastructure operators.",
+            "China cyberspace governance institutions regulatory agencies",
+            "cybersecurity administration CAC network management",
+            "institutional framework internet regulation policy",
+            "organizational structure internet governance China"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "Hao Huang是哈佛法学院法学硕士项目的哪一届学生？",
+          "fusion_extra": [
+            "Hao Huang is a graduate of Harvard Law School's Master of Laws (LL.M.) program, specifically in the Class of 2019. During the LL.M. year, Huang participated in the Program on International Law and focused on comparative constitutional law, contributing to a research paper on judicial independence in East Asian jurisdictions.",
+            "Harvard Law School LL.M. program alumni",
+            "Hao Huang legal education biography",
+            "Harvard Law School LL.M. class year graduate",
+            "law school LLM program student profile"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "2023年10月21日生效的“英美数据桥”如何简化美英之间的数据跨境传输？",
+          "fusion_extra": [
+            "The UK-US Data Bridge, which came into effect on October 21, 2023, establishes a streamlined mechanism for cross-border data transfers by allowing UK organisations to transfer personal data to US entities certified under the UK Extension to the US-EU Data Privacy Framework without requiring additional safeguards. This adequacy-based arrangement eliminates the need for Standard Contractual Clauses or Binding Corporate Rules for certified recipients, thereby reducing compliance burdens and operational delays for transatlantic data flows in sectors such as finance, technology, and research.",
+            "UK-US Data Bridge October 2023 data transfer adequacy",
+            "data localization cross-border transfer GDPR UK",
+            "data protection framework Privacy Shield replacement",
+            "UK-US data bridge streamlined transfer mechanisms compliance"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "对于危害程度高但发生概率低的数据，在重要数据识别中应如何判定？",
+          "fusion_extra": [
+            "在重要数据识别过程中，针对危害程度高但发生概率低的数据类型（如罕见的生物特征信息或特定工业控制参数），应采用基于风险影响的加权评估模型。通常，评估框架会将危害程度（Impact）的权重系数设置为发生概率（Likelihood）权重的2-3倍，并引入危害不可逆性修正因子，以确保即使事件发生概率低，其潜在的高危害性（如国家安全、重大公共利益损害）也能在最终判定中得到充分体现，从而将其准确纳入重要数据目录。",
+            "data classification criticality assessment high-impact low-probability",
+            "information asset valuation risk-based identification methodology",
+            "data sensitivity classification impact probability matrix",
+            "enterprise data governance data importance criteria prioritization"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "认证机构在做出个人信息保护认证决定时，依据哪些材料和报告？",
+          "fusion_extra": [
+            "在个人信息保护认证程序中，认证机构综合评估多项材料后做出最终认证决定。核心依据包括：由独立评估机构出具的《个人信息保护影响评估报告》（PIA），该报告需依据GB/T 39335-2020标准对数据处理活动进行合规性分析；数据控制者提交的《个人信息安全管理制度与流程文档》，涵盖数据分类分级、访问控制、加密措施及应急响应机制；以及针对特定技术措施（如匿名化、差分隐私）实施效果的《第三方技术测试报告》。认证决定需满足《个人信息保护法》第55条及TC260-PG-20223A《个人信息保护认证实施规则》的全部要求。",
+            "personal information protection certification decision materials",
+            "certification authority audit report documents",
+            "data protection certification compliance assessment",
+            "privacy certification review criteria evidence"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "如果Comp.CN的数据传输行为导致数据主体受损，它与Comp.EU应如何共同承担法律责任？",
+          "fusion_extra": [
+            "Under the General Data Protection Regulation (GDPR), when a data controller (Comp.EU) and a data processor (Comp.CN) are jointly involved in the processing of personal data, they may be held jointly and severally liable for damages suffered by data subjects. Specifically, Article 82(2) of the GDPR stipulates that each controller or processor shall be held liable for the entire amount of damage to ensure effective compensation for the data subject. If Comp.CN's data transfer activities violate GDPR provisions, such as unlawful transfer to a third country without adequate safeguards, Comp.EU, as the controller, remains accountable for ensuring compliance and may be required to provide full compensation, after which it can seek contribution from Comp.CN based on their respective responsibilities as outlined in their contractual arrangements.",
+            "data transfer liability joint controller GDPR",
+            "cross-border data processing data breach compensation",
+            "data subject rights transfer impact assessment",
+            "legal liability data controller processor"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "网站指南的分类有哪些？",
+          "fusion_extra": [
+            "网站指南通常根据其功能和适用场景进行分类，主要包括用户指南、管理员指南和开发者指南。用户指南侧重于操作流程和常见问题解答，管理员指南涵盖网站配置、权限管理和安全维护，而开发者指南则提供API文档、代码示例和集成框架说明。这些分类有助于不同角色的用户快速定位所需信息，提升网站的可访问性和使用效率。",
+            "website taxonomy classification categories types",
+            "web portal directory classification schemes",
+            "website guide categories information architecture",
+            "content taxonomy website classification models"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "PIPL和GDPR在认定未成年人的个人信息是否属于敏感数据方面有何不同？",
+          "fusion_extra": [
+            "The Personal Information Protection Law (PIPL) of China and the General Data Protection Regulation (GDPR) of the European Union both treat children's personal data as a special category of sensitive data, but they differ in key aspects. PIPL, under Article 28, presumes that any personal information of minors under the age of 14 is sensitive and requires separate consent from a parent or guardian for processing. In contrast, GDPR Article 8 specifically addresses the age of digital consent, which is set between 13 and 16 years old by member states, and only requires parental consent for information society services when the child is below that threshold, without automatically classifying all their data as sensitive under Article 9.",
+            "PIPL GDPR sensitive personal information minors",
+            "children data protection law comparison",
+            "sensitive data definition minors age threshold",
+            "personal information protection minors regulations"
+          ],
+          "r_vec": 41,
+          "r_rer": null
+        },
+        {
+          "q": "数据保护机构在采纳标准数据保护条款时，需要依据哪些具体条款？",
+          "fusion_extra": [
+            "根据欧盟《通用数据保护条例》（GDPR）第46条第2款（c）项的规定，数据保护机构在批准标准数据保护条款（Standard Data Protection Clauses）作为国际数据传输的适当保障措施时，需评估条款是否提供了实质上等同于欧盟数据保护水平的保障。具体而言，评估需依据《欧盟委员会实施决定》（如EU 2021/914）中附录所列的具体条款，包括数据处理者义务、数据主体权利、安全措施及跨境转移的具体限制。此外，评估还需考虑接收国的法律环境是否影响条款的有效性，例如第三国政府的监控法律是否与欧盟基本权利原则相冲突。",
+            "data protection authority standard contractual clauses adoption criteria",
+            "SCCs legal basis GDPR compliance requirements",
+            "data transfer mechanism adequacy decision supplementary measures",
+            "regulatory approval process SCCs implementation guidelines"
+          ],
+          "r_vec": 111,
+          "r_rer": null
+        },
+        {
+          "q": "在什么条件下学术研究机构使用个人资料进行统计分析并发表研究成果可被认定为适法的特定目的外利用？",
+          "fusion_extra": [
+            "Under the provisions of China's Personal Information Protection Law (PIPL), an academic research institution may conduct statistical analysis using personal data and publish the research findings without obtaining separate consent if the processing is necessary for academic research purposes, the data is de-identified or anonymized in accordance with national standards (GB/T 35273-2020), and the institution has implemented strict security measures to prevent the re-identification of individuals. The research must be conducted for public interest, such as advancing public health, scientific advancement, or social welfare, and the institution must conduct a Personal Information Protection Impact Assessment (PIPIA) to mitigate risks to data subjects. This 'specific purpose' exemption applies only when the processing does not involve sensitive personal information in a manner that could cause harm, and the research results are published in a manner that does not directly identify any individual.",
+            "academic research personal data statistical analysis legal compliance",
+            "secondary use purpose limitation GDPR privacy law",
+            "research exemption anonymization de-identification data protection",
+            "ethical review board informed consent IRB compliance"
+          ],
+          "r_vec": 114,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "fusion_extra": [
+            "The Massachusetts Department of Environmental Protection (MassDEP) conducted its annual CO2 Allowance Trading Program auction in 2023, distributing a total of 12.5 million metric tons of 2023 vintage CO2 allowances. This quantity was determined based on the state's updated emissions cap under the Regional Greenhouse Gas Initiative (RGGI), which requires a 3% annual reduction in the electricity sector's carbon budget. Proceeds from the auction, which saw a clearing price of $13.25 per allowance, were directed towards energy efficiency and renewable energy investment programs as mandated by state statute.",
+            "Massachusetts Department Environmental Protection carbon allowance auction",
+            "carbon allowance auction 2023 tons sold",
+            "Mass DEP carbon auction results 2023",
+            "regional greenhouse gas initiative RGGI Massachusetts auction data"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "fusion_extra": [
+            "Under Phase III of the Korean Emissions Trading System (K-ETS), which commenced in 2021, regulated entities are permitted to use offset credits, including both domestic Korean Offset Credits (KOCs) and international units like Certified Emissions Reductions (CERs), to meet a portion of their compliance obligation. The quantitative limit for the use of these offset credits was set at a maximum of 10% of a regulated entity's total compliance obligation for that year. This limit was implemented to ensure that the primary driver for emission reductions within the scheme remains direct abatement by installations, while still providing some flexibility.",
+            "Korean ETS Phase 3 offset credit limit percentage",
+            "Korea emissions trading scheme offset allowance quantitative restriction",
+            "KETAS Phase 3 compliance obligation offset ratio",
+            "Korean carbon market offset credit cap percentage cap-and-trade"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "fusion_extra": [
+            "Under the revised EU Emissions Trading System (EU ETS), the new ETS 2 is established to extend carbon pricing to sectors not previously covered. This separate system, which includes the road transport and buildings sectors, is scheduled to begin its compliance period in 2027, with the first compliance year starting on 1 January 2027. The launch may be delayed to 2028 if energy prices are exceptionally high, as determined by a specific market stability reserve mechanism.",
+            "EU ETS 2 timeline implementation start date",
+            "transport buildings sector inclusion ETS 2",
+            "European Union Emissions Trading System Phase 4 buildings transport",
+            "EU ETS 2 regulatory milestone 2027"
+          ],
+          "r_vec": 14,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "fusion_extra": [
+            "Under the EU's Carbon Border Adjustment Mechanism (CBAM), importers are required to submit their annual CBAM declaration to the competent national authority by 31 May each year. This declaration must cover the total embedded emissions in goods imported during the preceding calendar year, along with the corresponding number of CBAM certificates surrendered to cover the carbon price due. The obligation applies to EU importers and indirect customs representatives for goods listed in Annex I of Regulation (EU) 2023/956.",
+            "CBAM annual data submission deadline EU importer",
+            "Carbon Border Adjustment Mechanism reporting requirements",
+            "EU CBAM transitional period verification timeline",
+            "CBAM declarant obligations annual declaration schedule"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "fusion_extra": [
+            "When a carbon border adjustment mechanism (CBAM) is implemented at a rate of €100 per tonne of CO2 equivalent, Chinese steel and aluminum exports to the EU are projected to require a total carbon emission reduction of approximately 18.7 million tonnes by 2030. This estimate is based on modeling that assumes a price elasticity of demand for carbon-intensive imports of -0.4 and a decarbonization pathway involving a 42% shift to green hydrogen-based direct reduced iron (DRI) in steel production and a 55% adoption of inert anode technology in aluminum smelting. The reduction accounts for both the direct process emissions and the upstream electricity-related emissions associated with these exported goods.",
+            "carbon border adjustment mechanism CBAM 100 euro per ton steel aluminum",
+            "China EU export carbon reduction 2030 projection steel aluminum",
+            "EU carbon tariff impact steel aluminum production emissions reduction",
+            "CBAM effectiveness China export low carbon transition 2030"
+          ],
+          "r_vec": 12,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "fusion_extra": [
+            "DNV provides comprehensive advisory services to enterprises navigating carbon pricing policies, including the design and implementation of robust carbon accounting systems compliant with ISO 14064 standards. Their support encompasses scenario analysis for carbon cost impacts, strategy development for internal carbon pricing mechanisms, and guidance on integrating carbon considerations into corporate governance and risk management frameworks. DNV's technical experts also assist in preparing for compliance with mechanisms like the EU Emissions Trading System (ETS) and California's Cap-and-Trade Program, utilizing lifecycle assessment (LCA) methodologies to quantify emission reductions.",
+            "DNV carbon pricing advisory services",
+            "carbon tax emissions trading scheme compliance",
+            "climate policy risk assessment mitigation strategies",
+            "DNV sustainability consulting carbon market support"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "fusion_extra": [
+            "根据海关合作理事会制定的《商品名称及编码协调制度》（HS编码），代码721260对应的产品类别为'镀或涂锌的铁或非合金钢宽板材'。该编码属于HS第72章'钢铁'下的7212目，具体涵盖通过热浸镀锌或其他方法镀锌的宽度不小于600毫米的板材、片材及带材。该类产品广泛应用于建筑、汽车制造和家电行业的防腐蚀结构件生产。",
+            "HS code 721260 trade classification product",
+            "tariff code 721260 steel flat rolled",
+            "customs classification 721260 product description",
+            "international trade code 721260 commodity"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "fusion_extra": [
+            "在欧盟碳边境调节机制（CBAM）的提案中，排放证书的价格并非由欧盟委员会或成员国政府直接定价。根据欧盟的立法框架，CBAM证书的价格将直接与欧盟排放交易体系（EU ETS）的配额拍卖结算价格挂钩，具体采用拍卖平台每周公布的平均结算价，确保碳价信号的一致性。这一机制旨在防止碳泄漏，并促使CBAM覆盖行业的进口商为其产品的隐含碳排放支付与欧盟生产商同等的碳成本。",
+            "CBAM carbon border adjustment mechanism certificate pricing",
+            "EU ETS emissions trading scheme allowance price",
+            "carbon price determination methodology benchmark",
+            "CBAM certificate cost calculation regulation"
+          ],
+          "r_vec": 3,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "fusion_extra": [
+            "A comprehensive analysis of the Monitoring, Reporting, and Verification (MRV) system challenges within China's national carbon emissions trading scheme (ETS) was published in 2018. The study, authored by Wang HailJun and colleagues, detailed critical issues such as data quality assurance, inconsistent reporting methodologies, and the high operational costs for enterprises, with the findings catalogued under DOI 10.1016/j.eneco.2018.03.015.",
+            "China ETS MRV system verification challenges",
+            "carbon trading market monitoring reporting",
+            "Wang HailJun 2018 publication DOI",
+            "Chinese emissions trading scheme MRV limitations"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "fusion_extra": [
+            "苏庆义在其发表于《世界知识》2023年第5期的学术论文中，题为《全球贸易体系重构与中国的战略应对》，深入探讨了在地缘政治紧张和供应链区域化背景下，以WTO为核心的多边贸易体制面临的挑战。文章分析了美国推动的“印太经济框架”（IPEF）和“芯片与科学法案”对全球贸易规则制定权的影响，并提出了中国通过深化区域全面经济伙伴关系协定（RCEP）和申请加入《全面与进步跨太平洋伙伴关系协定》（CPTPP）来维护自身发展利益的政策建议。",
+            "Su Qingyi World Knowledge 2023 journal article",
+            "Chinese scholar international relations publication",
+            "academic journal article title search metadata",
+            "PRC foreign affairs commentary 2023"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "records": [
+        {
+          "q": "文本中提到Agentic AI的质量离不开什么类型的数据？",
+          "fusion_extra": [
+            "The quality of Agentic AI systems is fundamentally dependent on high-fidelity, context-rich interaction data, particularly multi-turn dialogue logs that capture user intent, tool usage, and environmental feedback. This data type enables the training of robust policy and value networks through reinforcement learning from human feedback (RLHF) and self-play simulations, ensuring agents can handle complex, real-world task decompositions.",
+            "Agentic AI data quality requirements",
+            "training data curation for autonomous agents",
+            "LLM agent supervised reinforcement learning data",
+            "synthetic data generation agentic systems"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "根据描述，仅用于匿名统计目的的信息在哪些条件下可能被用来识别个人？",
+          "fusion_extra": [
+            "Under regulations such as the EU's General Data Protection Regulation (GDPR), information that is anonymized for statistical purposes may still be considered personal data if it can be re-identified through the use of additional data, reasonably available technology, or when the anonymization technique is reversible. For instance, aggregated health records used in epidemiological studies might be deemed identifiable if the combination of demographic variables (e.g., age, postal code, and diagnosis date) in a small population cohort allows for singling out an individual. The key legal test is whether the controller or any other person can identify a natural person by all means reasonably likely to be used, considering factors like cost, time, and technological feasibility.",
+            "anonymous statistical data re-identification risk",
+            "PII disclosure indirect identifiers quasi-identifiers",
+            "data anonymization k-anonymity l-diversity t-closeness",
+            "privacy breach statistical inference attack"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "COFIBA算法在哪些关键方面与LinUCB算法有所区别？",
+          "fusion_extra": [
+            "COFIBA (Contextual Optimistic Thompson Sampling with Bandit Algorithm) differs from LinUCB primarily in its use of Bayesian posterior sampling for exploration rather than optimistic index-based selection. Unlike LinUCB, which computes an upper confidence bound by adding an exploration bonus proportional to sqrt(alpha * x^T A^{-1} x) to the estimated mean reward, COFIBA maintains and samples from a posterior distribution over reward parameters using Thompson Sampling. Furthermore, COFIBA addresses the cold-start problem in collaborative filtering bandits by leveraging side information from multiple users through a matrix factorization approach, whereas standard LinUCB typically operates in a per-user or global parameter setting without explicit user-user or item-item similarity modeling.",
+            "COFIBA algorithm LinUCB comparison bandit",
+            "contextual bandit algorithms difference features",
+            "COFIBA exploration exploitation LinUCB",
+            "multi-armed bandit contextual bandit algorithm design"
+          ],
+          "r_vec": 1,
+          "r_rer": 3
+        },
+        {
+          "q": "在特征组数据摄取后，哪些特征组的计数被添加到了ps字典中？",
+          "fusion_extra": [
+            "After the ingestion pipeline processes feature groups, the system iterates through the successfully ingested groups and updates a metadata dictionary. For each feature group, it appends the group name and its total instance count as a key-value pair into the `ps` dictionary, such as `ps['feature_group_name'] = count`. This dictionary is subsequently used to log summary statistics and validate the integrity of the batch processing stage.",
+            "feature group ingestion ps dictionary count increment",
+            "data ingestion pipeline feature group counter",
+            "ps dictionary population feature extraction count",
+            "feature group metadata count tracking ps dictionary"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "bandit算法中累积遗憾的数学表达式是什么？",
+          "fusion_extra": [
+            "In the context of multi-armed bandit algorithms, the cumulative regret over T time steps is formally defined as the difference between the total reward achievable by always selecting the optimal arm and the total reward actually collected by the chosen policy. Mathematically, it is expressed as R_T = T * μ* - Σ_{t=1 to T} μ_{a_t}, where μ* denotes the expected reward of the optimal arm and μ_{a_t} is the expected reward of the arm selected at time step t. The goal of efficient bandit algorithms, such as UCB1 or Thompson Sampling, is to achieve a sub-linear cumulative regret, typically of the order O(√(KT log T)) for K arms.",
+            "bandit algorithm cumulative regret mathematical expression",
+            "multi-armed bandit regret bound upper confidence bound",
+            "regret minimization exploration exploitation regret analysis",
+            "Hoeffding inequality bandit regret calculation formula"
+          ],
+          "r_vec": 3,
+          "r_rer": 5
+        },
+        {
+          "q": "文中如何解决新用户推荐时因缺乏历史数据而无法使用GBDT的问题？",
+          "fusion_extra": [
+            "For cold-start users without interaction history, the proposed framework employs a hybrid GBDT-LightFM architecture. Specifically, LightFM's matrix factorization component generates initial user embeddings from available side information (e.g., demographics, device type), which are then concatenated with engineered features to form the input feature matrix for the subsequent XGBoost model. This allows the GBDT model to make effective predictions by leveraging collaborative signals from similar users while avoiding the overfitting issues typical of pure content-based methods for new users.",
+            "cold start recommendation GBDT collaborative filtering",
+            "new user data sparsity hybrid recommendation system",
+            "gradient boosting decision tree feature engineering cold start",
+            "implicit feedback user profiling recommendation algorithms"
+          ],
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "构建实时推荐引擎时使用了什么数据集？",
+          "fusion_extra": [
+            "The real-time recommendation engine was trained and evaluated using the MovieLens-25M dataset, which contains 25 million ratings applied to 62,000 movies by 162,000 users. For online A/B testing, a proprietary dataset comprising 120 million clickstream events from an e-commerce platform over a 90-day period was utilized. The hybrid model architecture, combining collaborative filtering with a deep neural network, was benchmarked on these datasets to achieve a precision@10 of 0.45 and a mean reciprocal rank (MRR) of 0.38.",
+            "real-time recommendation engine datasets",
+            "user behavior interaction logs click-stream",
+            "recommendation system benchmark MovieLens Amazon",
+            "implicit feedback ratings purchase history"
+          ],
+          "r_vec": 28,
+          "r_rer": 2
+        },
+        {
+          "q": "UCB算法中悲观保守的做法是如何选择臂的？",
+          "fusion_extra": [
+            "在Upper Confidence Bound (UCB)算法中，悲观保守的选择策略通过计算每个臂的置信上界来实现。具体而言，算法为每个臂维护一个经验平均奖励估计，并加上一个与该臂被拉动次数相关的探索项，通常形式为√(2ln(t)/N_i(t))，其中t为总轮次，N_i(t)为臂i的拉动次数。选择动作时，算法选取置信上界最大的臂，从而在利用已知最优臂和探索不确定性高的臂之间取得平衡，体现了乐观面对不确定性的原则。",
+            "Upper Confidence Bound UCB algorithm exploration exploitation",
+            "pessimistic bound UCB action selection arm selection",
+            "optimistic exploration UCB index lower confidence bound",
+            "multi-armed bandit UCB1 UCB tuning parameter alpha"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "LinUCB算法的Disjoint和Hybrid版本在参数共享方面有什么区别？",
+          "fusion_extra": [
+            "在LinUCB算法的Disjoint版本中，每个臂（arm）维护独立的特征向量和线性回归参数，因此不同臂之间的参数不共享。相比之下，Hybrid版本采用了一个共享的全局线性回归模型来捕捉臂之间的共同特征，并同时保留每个臂的独立参数，从而实现部分参数共享。这种设计使得Hybrid LinUCB在存在臂间相关性时能够更高效地利用数据，提升推荐性能。",
+            "LinUCB algorithm disjoint hybrid parameter sharing",
+            "contextual bandit LinUCB disjoint shared linear models",
+            "LinUCB hybrid component-wise parameter sharing",
+            "LinUCB disjoint per-arm independent parameters"
+          ],
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "传统推荐系统在哪些具体情境下效果会变差，甚至加剧用户的选择困难？",
+          "fusion_extra": [
+            "In scenarios involving high-dimensional user preference spaces, cold-start users with sparse interaction history, or rapidly evolving item catalogs, traditional collaborative filtering and content-based recommendation systems often exhibit reduced accuracy and user satisfaction. Specifically, in domains like fashion or media where user tastes are highly subjective and volatile, these systems can exacerbate choice overload by repeatedly suggesting items within a narrow, algorithmically reinforced preference filter, failing to promote serendipitous discovery or accommodate nuanced, context-dependent needs.",
+            "traditional collaborative filtering cold start sparsity limitations",
+            "filter bubble echo chamber information overload choice paralysis",
+            "long-tail items popularity bias serendipity deficiency",
+            "user satisfaction decision fatigue recommendation fatigue evaluation"
+          ],
+          "r_vec": 12,
+          "r_rer": 2
+        }
+      ]
+    },
+    {
+      "id": "09",
+      "records": [
+        {
+          "q": "2023年AAAI会议上Sun等人关于对比学习减少对话幻觉的研究论文DOI是什么？",
+          "fusion_extra": [
+            "Sun et al. (2023) presented their research on reducing dialogue hallucinations using contrastive learning at the AAAI 2023 conference. Their method, implemented on the GPT-3.5 architecture, achieved a 35% relative reduction in factual inconsistency rates across multiple dialogue benchmarks by incorporating a contrastive loss function during fine-tuning. The paper details the experimental setup on the PersonaChat and Wizard of Wikipedia datasets and reports a BLEU score improvement of 2.8 points over the baseline.",
+            "contrastive learning dialogue hallucination reduction",
+            "AAAI 2023 Sun dialogue hallucination paper",
+            "dialogue system hallucination mitigation techniques",
+            "contrastive learning retrieval augmented generation hallucination"
+          ],
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "为了帮助LLM模型理解提示的结构，应该使用什么符号来分隔不同的块？",
+          "fusion_extra": [
+            "To help LLMs parse structured prompts, the XML-like syntax `<section>...</section>` or markdown-style headers (`# Section Title`) are commonly employed to delineate distinct content blocks. These symbols act as clear structural markers, enabling the model to differentiate between instructions, context, input data, and output examples within a single prompt. For instance, wrapping the task description in a `<task>` tag and the user query in a `<query>` tag can significantly improve the model's attention and response accuracy for complex, multi-part instructions.",
+            "LLM prompt structure delimiters syntax tokens",
+            "prompt engineering chunking separation symbols",
+            "context window management prompt formatting",
+            "structural markers section separators prompt design"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在LLM幻觉评估中，多模态数据集如何扩展评估范畴？",
+          "fusion_extra": [
+            "多模态幻觉评估基准如幻觉评估基准 (HGE) 通过整合图像-文本对、视频问答和音频描述等数据源，显著扩展了评估范畴。例如，研究者使用 GPT-4V 作为评判者，在跨模态一致性检测中引入了视觉事实性验证模块，该模块计算图像区域与文本描述间的语义相似度阈值，典型阈值设为0.85的余弦相似度。实验证明，多模态数据集能够揭示纯文本评估无法捕获的感知层面幻觉，特别是在图像标题生成和视觉问答任务中，将幻觉检出率提高了约18-25个百分点。",
+            "multimodal hallucination evaluation dataset LLM",
+            "hallucination assessment visual language benchmark",
+            "cross-modal factuality grounding VQA",
+            "evaluation scope expansion multimodal artifacts"
+          ],
+          "r_vec": 7,
+          "r_rer": 1
+        },
+        {
+          "q": "当预测域的置信度分数低于80%时，系统会如何调整其检索范围？",
+          "fusion_extra": [
+            "When the domain classifier outputs a confidence score below 80% for a prediction, the system initiates an adaptive retrieval scope expansion. It dynamically increases the search radius from the initial top-50 candidates to the top-200 documents and includes semantically adjacent domains identified by a multi-hop graph traversal algorithm. This fallback mechanism ensures comprehensive candidate recall, mitigating the risk of missing critical information in ambiguous or noisy query contexts.",
+            "confidence score threshold retrieval expansion",
+            "low-confidence prediction domain adaptation",
+            "adaptive retrieval range uncertainty calibration",
+            "confidence-aware retrieval strategy document ranking"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "法律专业人士如何利用幻觉检测工具来避免伪造的案件引用？",
+          "fusion_extra": [
+            "Legal professionals can leverage hallucination detection tools integrated into legal research platforms to mitigate the risk of citing fabricated case law. These tools employ specialized fine-tuned language models to cross-reference generated case citations against authoritative legal databases like Westlaw or LexisNexis, flagging unverifiable precedents with a confidence score. By implementing a workflow where AI-drafted briefs are automatically scanned and verified through these verification systems before submission, attorneys can significantly reduce the ethical and procedural risks associated with non-existent case references.",
+            "legal AI hallucination detection case citation verification",
+            "legal document forgery detection NLP tools automated validation",
+            "hallucination mitigation large language model legal domain",
+            "citation verification systems legal tech risk management"
+          ],
+          "r_vec": 81,
+          "r_rer": 2
+        },
+        {
+          "q": "哪篇论文介绍了通过实时验证和纠正来减轻大型语言模型幻觉的“Ever”方法？",
+          "fusion_extra": [
+            "The 'Ever' method, introduced in the paper 'Ever: Enhancing Large Language Model Fidelity through Real-Time Validation and Correction', employs a runtime verification module that cross-references generated text against a structured knowledge base. This approach dynamically corrects factual inconsistencies and hallucinations during the inference phase, demonstrating a 15-20% improvement in factual accuracy on benchmarks like TruthfulQA and FActScore without requiring model retraining.",
+            "LLM hallucination mitigation real-time verification correction",
+            "Ever method paper LLM hallucination reduction",
+            "real-time validation LLM factuality hallucination",
+            "LLM hallucination alleviation verification mechanism"
+          ],
+          "r_vec": 136,
+          "r_rer": 2
+        },
+        {
+          "q": "在幻觉示例中，检索内容推荐的最佳图像质量获取时间窗口具体是多少，模型生成时如何处理这一信息导致事实偏离？",
+          "fusion_extra": [
+            "在幻觉示例分析中，最佳图像质量获取的时间窗口通常被确定为检索后150毫秒内，此时图像特征提取的信噪比最高，能有效支撑模型的事实对齐。然而，若模型在生成阶段未对该窗口内的检索内容进行适当的概率权重衰减或冲突消解，而是直接将其作为上下文特征与模型内部知识进行无差别融合，则可能导致事实偏离，因为检索内容的瞬时高质量信号可能掩盖了模型参数中固有的事实性约束。",
+            "hallucination examples retrieval best image quality time window",
+            "model generation factual deviation handling retrieval content",
+            "temporal window image quality hallucination mitigation",
+            "retrieval augmented generation hallucination temporal alignment"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "SelfCheckGPT在GPT-3生成的WikiBio段落实验中，哪种指标被证明表现最佳？",
+          "fusion_extra": [
+            "In the experimental evaluation of SelfCheckGPT on WikiBio paragraphs generated by GPT-3, multiple factual consistency metrics were compared, including BLEURT, BERTScore, and the proposed SelfCheckGPT metrics using different sampling strategies. The results demonstrated that the SelfCheckGPT-BERTScore variant, which leverages BERT-based embeddings to measure semantic similarity across multiple sampled passages, achieved the highest performance with an AUC-PR of 0.82 for detecting hallucinated sentences. This outperformed both traditional reference-free metrics and the BLEU-based SelfCheckGPT variants, confirming that embedding-based consistency checks are more robust for factual verification in long-form text generation.",
+            "SelfCheckGPT hallucination detection metric",
+            "GPT-3 WikiBio paragraph generation evaluation",
+            "consistency score BERTScore NLI natural language inference",
+            "factual accuracy checking LLM output verification"
+          ],
+          "r_vec": 13,
+          "r_rer": 2
+        },
+        {
+          "q": "减轻文本幻觉需要采用什么训练机制？",
+          "fusion_extra": [
+            "To mitigate text hallucination in large language models, reinforcement learning from human feedback (RLHF) is a commonly employed training mechanism. This process involves fine-tuning the model using a reward model trained on human preferences to score outputs, which guides the language model to generate more factually accurate and contextually faithful text. Techniques such as Direct Preference Optimization (DPO) and constitutional AI further refine this alignment by incorporating automated or self-critique feedback loops during the training phase.",
+            "hallucination mitigation training mechanisms",
+            "reinforcement learning from human feedback RLHF",
+            "knowledge-grounded decoding constrained decoding",
+            "factuality alignment supervised fine-tuning SFT"
+          ],
+          "r_vec": 47,
+          "r_rer": 1
+        },
+        {
+          "q": "关于Ji, Z.等人合著的“Survey of Hallucination in Natural Language Generation”论文，其发表在ACM Computing Surveys的卷号和页码范围是什么？",
+          "fusion_extra": [
+            "The comprehensive survey paper \"Survey of Hallucination in Natural Language Generation\" by Ji, Z. et al. was published in the journal ACM Computing Surveys, specifically within Volume 55, Issue 3, spanning pages 1 to 38. The article provides a taxonomy of hallucination types in NLG tasks, evaluates various detection metrics, and benchmarks hallucination mitigation strategies across tasks like summarization, dialogue generation, and machine translation.",
+            "Ji survey hallucination natural language generation ACM Computing Surveys",
+            "hallucination survey NLG volume page numbers publication details",
+            "ACM Computing Surveys paper citation Ji Zhou",
+            "natural language generation hallucination review paper bibliographic information"
+          ],
+          "r_vec": 5,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "records": [
+        {
+          "q": "从2000年到2022年3月，全球固态电池专利数量排名第一的公司是哪家？",
+          "fusion_extra": [
+            "根据智慧芽（PatSnap）全球专利数据库的统计，从2000年1月至2022年3月，丰田汽车公司在固态电池技术领域提交的公开专利申请数量位居全球首位，其专利布局主要集中在硫化物固体电解质材料、电极界面设计及制造工艺方面。",
+            "solid-state battery patent ranking global",
+            "solid-state battery patent landscape 2000-2022",
+            "solid-state electrolyte patent analysis top company",
+            "solid-state battery intellectual property filing statistics"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "赣锋锂电的第二代固态电池能量密度是多少？",
+          "fusion_extra": [
+            "Ganfeng Lithium's second-generation solid-state battery, designated as the Li-S model, achieves an energy density of 360 Wh/kg at the cell level. This represents a significant improvement over the first-generation's 260 Wh/kg, utilizing a sulfide-based solid electrolyte (Li6PS5Cl) and a lithium metal anode with a 99.9% Coulombic efficiency. The cell demonstrated stable cycling with less than 1% capacity loss after 500 cycles at a 0.5C rate.",
+            "Ganfeng Lithium solid-state battery energy density",
+            "second generation solid-state battery specific energy",
+            "lithium metal anode solid electrolyte capacity",
+            "solid-state battery Wh/kg volumetric energy density"
+          ],
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "Robert Mitchell 的研究领域是什么？",
+          "fusion_extra": [
+            "Robert Mitchell's research focuses on computational cognitive neuroscience, particularly using dynamic causal modeling and fMRI data to investigate the neural mechanisms of attention and perception in the human visual cortex. His work often integrates psychophysical methods with advanced Bayesian inference techniques to model information flow across cortical hierarchies, as demonstrated in his publications on predictive coding and attentional modulation in V1 and V4.",
+            "Robert Mitchell research area expertise",
+            "Robert Mitchell publications academic profile",
+            "Robert Mitchell scholar computer science",
+            "Robert Mitchell Google Scholar Semantic Scholar"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "固态电池技术迭代的第一阶段具体涉及哪些材料或技术组合？",
+          "fusion_extra": [
+            "The first phase of solid-state battery technology iteration focuses on the integration of sulfide-based solid electrolytes, such as Li₆PS₅Cl, with high-nickel layered oxide cathodes like LiNi₀.₈Mn₀.₁Co₀.₁O₂ (NMC811) and graphite or silicon-carbon composite anodes. Key enabling techniques include interfacial coating with LiNbO₃ to mitigate cathode-electrolyte side reactions and cold pressing at 200-300 MPa to ensure sufficient electrode-electrolyte contact for achieving an initial ionic conductivity of 3-5 mS/cm at room temperature.",
+            "solid-state battery first generation electrolyte materials",
+            "sulfide solid electrolyte Li6PS5Cl garnet electrolyte",
+            "cathode anode interface solid-state battery components",
+            "semi-solid battery technology iteration transition stage"
+          ],
+          "r_vec": 78,
+          "r_rer": 3
+        },
+        {
+          "q": "电动汽车电池在哪些方面存在主要局限性？",
+          "fusion_extra": [
+            "电动汽车锂离子电池的主要局限性包括能量密度限制（当前量产电池包能量密度约为150-260 Wh/kg），导致续航里程在低温环境下衰减可达30%-50%，以及充电速率受制于电池热管理和电解质离子电导率。此外，电池的循环寿命（通常在800-2000次循环后容量衰减至80%）和成本（占整车成本的30%-40%）仍是制约其大规模应用的关键因素。材料供应链中对钴、镍等关键矿物的依赖也构成了潜在的供应风险与环境影响。",
+            "electric vehicle battery limitations energy density",
+            "EV battery cycle life thermal management",
+            "battery degradation fast charging infrastructure",
+            "solid-state battery cost scalability challenges"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "哪家公司已成功应用等静压技术于固态电池组装？",
+          "fusion_extra": [
+            "固态电池的组装工艺中，冷等静压（CIP）技术已被多家领先企业成功应用以提升电极密度和界面接触。例如，Solid Power在其硫化物固态电池的制造中，采用150-250 MPa的压力进行等静压处理，显著降低了孔隙率并改善了离子电导率。QuantumScape同样在其专利工艺中描述了使用等静压技术来压制多层固态电池堆叠，确保各组件间的紧密结合。",
+            "isostatic pressing solid-state battery assembly",
+            "cold isostatic pressing CIP solid-state electrolyte densification",
+            "high pressure sintering ceramic electrolyte interfacial contact",
+            "solid-state battery manufacturing company commercialization"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2024年全球消费锂电池出货量在总锂离子电池出货量中占多大比例？",
+          "fusion_extra": [
+            "In 2024, global shipments of consumer lithium-ion batteries reached approximately 125 GWh, representing 18.7% of the total global lithium-ion battery shipments of 669 GWh. The primary application categories driving this segment include smartphones, laptops, and portable power tools, with cylindrical 18650 and 21700 cells maintaining a dominant form factor share of over 60% within the consumer category. Market analysis indicates that this proportion has remained relatively stable over the past three years, fluctuating between 17.5% and 19.2% annually.",
+            "consumer lithium-ion battery shipment volume 2024 global",
+            "lithium battery market share consumer electronics",
+            "portable battery shipment data percentage total lithium-ion",
+            "2024 lithium-ion battery shipment forecast consumer segment"
+          ],
+          "r_vec": 32,
+          "r_rer": 1
+        },
+        {
+          "q": "固体电池中固态电解质与电极接触不良如何影响锂离子传输？",
+          "fusion_extra": [
+            "In solid-state batteries, poor interfacial contact between the solid electrolyte and the electrodes leads to high interfacial resistance, which severely impedes lithium-ion transport. This poor contact often results from volumetric changes during cycling or intrinsic rigidity of the electrolyte material, creating voids and limiting the effective contact area. Consequently, lithium ions face a tortuous and high-energy-barrier path at the interface, increasing polarization, promoting lithium dendrite growth, and ultimately degrading the cell's rate capability and cycle life.",
+            "solid-state electrolyte electrode interface lithium-ion transport",
+            "contact resistance ionic conductivity interfacial impedance",
+            "solid electrolyte interphase SEI formation cycling stability",
+            "microcrack delamination mechanical stress ion pathway"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "温等静压技术如何通过施加均匀压力来减少固态电池的电阻率？",
+          "fusion_extra": [
+            "Warm Isostatic Pressing (WIP) is a solid-state battery manufacturing technique that applies uniform hydrostatic pressure at elevated temperatures (typically 60-120°C) to densify ceramic electrolyte and electrode layers. By subjecting the cell stack to isotropic pressures of 50-200 MPa in a pressurized medium like oil or inert gas, the process eliminates microcracks and reduces interfacial voids, which are primary contributors to high ionic and electronic resistance. This results in a significant decrease in the overall area-specific resistance (ASR) and improves ionic conductivity by enhancing particle-to-particle contact within the composite electrodes.",
+            "warm isostatic pressing solid-state battery resistivity",
+            "uniform pressure application ionic conductivity electrolyte densification",
+            "WIP technique battery electrode contact resistance",
+            "pressure distribution microstructure homogeneity solid-state"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为了最小化阴极颗粒的体积变化，文中建议混合哪两种阴极材料？",
+          "fusion_extra": [
+            "To minimize the volume change during cycling, the study recommends blending a high-nickel layered oxide cathode material (such as LiNi₀.₈Mn₀.₁Co₀.₁O₂, NMC811) with a spinel-structured material like LiMn₂O₄. This hybrid cathode strategy leverages the high energy density of the NMC component and the structural stability of the spinel phase, reducing the overall lattice strain and capacity fade observed during repeated charge-discharge cycles.",
+            "cathode material blending volume change minimization",
+            "mixed cathode particles volume expansion suppression",
+            "cathode composite material cycling stability",
+            "electrode material blending strategy structural integrity"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "records": [
+        {
+          "q": "如果我想报告Akamai系统中的漏洞，应该访问网站的哪个部分？",
+          "fusion_extra": [
+            "To report a security vulnerability in the Akamai platform, users should navigate to the Akamai Security Response Center (ASRC). This dedicated portal, accessible at security.akamai.com, provides a structured form for submitting vulnerability details, including CVSS scoring, proof-of-concept code, and affected CDN edge configuration. All submissions are triaged by the Akamai Product Security Incident Response Team (PSIRT) according to their coordinated disclosure policy.",
+            "Akamai vulnerability reporting security disclosure",
+            "Akamai bug bounty program responsible disclosure",
+            "Akamai security contact report vulnerability",
+            "Akamai cybersecurity incident reporting channel"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Z轴扩展中，路由器是怎样通过请求的userId来选择具体的应用程序实例的？",
+          "fusion_extra": [
+            "In Z-axis scaling, a router component is responsible for directing incoming requests to the appropriate application instance. The router typically employs a consistent hashing algorithm on a unique key extracted from the request, such as the userId. This hash value is mapped to a specific instance ID, ensuring that all requests with the same userId are consistently routed to the same instance, thereby preserving session state and affinity.",
+            "Z-axis scaling load balancing userId routing",
+            "application instance selection hash-based routing",
+            "session affinity consistent hashing distributed systems",
+            "request routing microservices userId-based partitioning"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "微服务架构中的软件组件如何根据当前容量和预测需求独立扩展计算资源？",
+          "fusion_extra": [
+            "In microservice architectures, individual software components can scale their compute resources independently through horizontal pod autoscaling (HPA) based on real-time metrics like CPU utilization, memory consumption, and custom application-level indicators such as requests per second. The autoscaling mechanism continuously monitors these metrics against predefined thresholds and leverages predictive analytics models trained on historical traffic patterns to proactively adjust replica counts, ensuring each service maintains optimal performance while efficiently utilizing cloud infrastructure resources. This per-service scaling is coordinated by orchestration platforms like Kubernetes, which manage resource allocation and scaling policies independently for each microservice container.",
+            "microservices autoscaling horizontal pod autoscaler HPA",
+            "capacity planning demand forecasting reactive scaling",
+            "elastic scaling Kubernetes resource limits CPU memory",
+            "dynamic resource allocation service mesh orchestration"
+          ],
+          "r_vec": 21,
+          "r_rer": 1
+        },
+        {
+          "q": "当单体应用的通信功能遇到流量激增时，为什么必须增加计算资源会导致资源浪费？",
+          "fusion_extra": [
+            "When a monolithic application with embedded communication features like WebSockets or SIP servers encounters a sudden traffic spike, horizontal scaling requires provisioning additional instances of the entire application stack, even though only the communication module is bottlenecked. This leads to resource waste because CPU, memory, and I/O allocated to the monolith's unrelated core business logic remain underutilized. The inefficient resource allocation is a key limitation that microservices architectures address by allowing independent scaling of communication services.",
+            "monolithic application communication scalability resource provisioning",
+            "vertical scaling traffic spike inefficient resource utilization",
+            "stateless service elastic scaling cloud-native architecture",
+            "load balancing capacity planning resource waste"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "微服务架构的持续部署特性如何改变发布更新的频率？",
+          "fusion_extra": [
+            "Microservice architecture enables continuous deployment (CD) by decoupling services, allowing independent updates to individual components without affecting the entire system. This leads to significantly higher release frequencies, with organizations often deploying hundreds of production changes per day via automated CI/CD pipelines, compared to traditional monolithic architectures that typically follow monthly or quarterly release cycles. Key enablers include containerization with Docker, orchestration using Kubernetes, and infrastructure-as-code practices that support rapid, reliable rollbacks and canary deployments.",
+            "microservices continuous deployment release frequency",
+            "microservices architecture deployment pipeline CI/CD",
+            "continuous delivery deployment automation frequency",
+            "microservices deployment strategy release management"
+          ],
+          "r_vec": 7,
+          "r_rer": 1
+        },
+        {
+          "q": "Amazon Prime Video 为什么将其音频和视频质量监控应用从微服务架构改为单体应用？",
+          "fusion_extra": [
+            "Amazon Prime Video transitioned its audio and video quality monitoring application from a microservices architecture to a monolithic application to address significant operational complexities and cost inefficiencies. The microservices design, which utilized AWS Lambda functions and Step Functions for orchestration, resulted in high latency and escalating costs due to the distributed nature of the components and the need for frequent inter-service communication. The consolidated monolithic application reduced deployment overhead, improved processing performance, and optimized resource utilization for real-time quality analysis at scale.",
+            "microservices monolith migration video streaming quality monitoring",
+            "Amazon Prime Video audio video monitoring architecture decision",
+            "microservices decomposition monolithic application cost optimization",
+            "video quality monitoring architecture scalability performance tradeoffs"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CI/CD管道中，如果出现问题，系统可以采取什么行动？",
+          "fusion_extra": [
+            "When a failure is detected in a CI/CD pipeline—for instance, a failed unit test, a security vulnerability scan, or a deployment error—the system can automatically trigger a rollback to the last known good build version. Additionally, it can send automated notifications via Slack or email to the responsible engineering team, pause the pipeline to prevent further downstream failures, and create an incident ticket in a system like Jira for tracking and resolution. These automated responses are typically configured as predefined steps within the pipeline's error-handling stage.",
+            "CI/CD pipeline failure handling automated rollback",
+            "continuous integration deployment error recovery strategies",
+            "pipeline alerting notifications incident response automation",
+            "fault tolerance self-healing deployment pipeline"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "团队规模超过多少名开发人员时，建议采用微服务架构？",
+          "fusion_extra": [
+            "Microservice architecture is recommended when a development team exceeds approximately 10-15 engineers, as it enables independent deployment cycles and reduces cross-team coordination overhead. Empirical studies in distributed systems engineering indicate that monolithic applications face diminishing returns in developer productivity beyond this threshold, leading to increased CI/CD pipeline bottlenecks and longer release cycles. The Netflix and Amazon case studies documented a transition to microservices when their core platform teams grew to 20-30 developers, reporting a 40% reduction in deployment time and improved fault isolation.",
+            "microservices architecture team size scaling",
+            "monolith decomposition thresholds developers",
+            "Conway's law organizational structure services",
+            "DevOps practices microservices adoption criteria"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么Kubernetes对于许多刚开始的团队来说不太适用？",
+          "fusion_extra": [
+            "Kubernetes presents significant operational overhead for nascent teams, primarily due to its steep learning curve in areas like cluster provisioning, workload orchestration, and networking policy management. The requirement to manage a complex stack—including etcd, kube-apiserver, and a Container Network Interface (CNI) plugin like Calico—demands specialized DevOps expertise that early-stage startups often lack, diverting engineering resources from core product development. Furthermore, the cost of maintaining a highly available control plane and associated cloud infrastructure (e.g., load balancers, persistent volumes) is frequently prohibitive for teams with limited budgets and unpredictable scaling needs.",
+            "Kubernetes adoption challenges small teams",
+            "Kubernetes complexity operational overhead",
+            "Kubernetes learning curve steep beginner",
+            "Kubernetes resource requirements cost overhead"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Camunda的代理设计中，针对工具部分有哪些具体的设计原则？",
+          "fusion_extra": [
+            "In the agent design for Camunda, the tool component adheres to several core design principles. These include stateless execution, where each tool invocation is independent and does not rely on persistent state between calls, and interface standardization, which mandates that all tools expose a consistent input/output schema via JSON Schema for predictable integration. Furthermore, tools are designed to be idempotent and fault-tolerant, with built-in retry mechanisms and circuit breaker patterns to handle transient failures in external API calls or microservice interactions.",
+            "Camunda agent design tool integration principles",
+            "BPMN service task connector external system integration",
+            "Camunda delegate expression implementation patterns",
+            "external task pattern worker polling mechanism"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "records": [
+        {
+          "q": "模仿学习和强化学习中，从少量演示或试验中学习的具体研究挑战是什么？",
+          "fusion_extra": [
+            "Imitation learning and reinforcement learning from few demonstrations or trials face several core research challenges, including the distribution shift problem in behavioral cloning where minor state deviations lead to compounded errors, the high sample complexity of trial-and-error exploration in sparse reward environments, and the difficulty of inferring latent intent from limited expert trajectories. Key methods such as DAgger, inverse reinforcement learning, and meta-learning frameworks like MAML attempt to mitigate these issues by addressing state-action space coverage, reward function ambiguity, and rapid policy adaptation across tasks with limited data.",
+            "imitation learning few-shot demonstration",
+            "reinforcement learning sparse reward sample efficiency",
+            "sample complexity meta-learning generalization",
+            "learning from limited interaction bootstrapping"
+          ],
+          "r_vec": 58,
+          "r_rer": 1
+        },
+        {
+          "q": "学习方式有哪两种选择？",
+          "fusion_extra": [
+            "学习方式主要分为监督学习（Supervised Learning）和无监督学习（Unsupervised Learning）两大类。监督学习依赖于带有标签的训练数据，通过最小化损失函数来优化模型参数，常用于分类和回归任务。无监督学习则处理未标注数据，旨在发现数据内在的结构或模式，如聚类分析或降维。",
+            "supervised learning unservised learning",
+            "training methodology supervised unsupervised",
+            "learning paradigm semi-supervised reinforcement",
+            "classification regression clustering"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "根据研究，AGI预计在何时达到奇点，届时AI将对社会产生什么影响？",
+          "fusion_extra": [
+            "Predictions regarding the Artificial General Intelligence (AGI) singularity, defined as the point where AI recursively self-improves beyond human control, vary significantly among experts, with projections ranging from the 2040s to later in the 21st century. A 2024 survey by the Machine Intelligence Research Institute estimates a 50% probability of reaching this threshold by 2060, contingent on sustained computational scaling and algorithmic breakthroughs. The anticipated societal impact includes transformative economic restructuring, potential labor displacement across most cognitive sectors, and unprecedented geopolitical shifts requiring robust international governance frameworks to mitigate existential risk.",
+            "artificial general intelligence AGI singularity timeline prediction",
+            "technological singularity AI surpassing human intelligence",
+            "AGI impact society economics labor market transformation",
+            "AI safety existential risk governance policy regulation"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "根据文本片段，批判者通常如何通过人类智力特征来论证当前最先进的AI系统无法实现强AI？",
+          "fusion_extra": [
+            "Critics of artificial general intelligence often cite qualitative gaps in machine cognition, particularly regarding human-like intentionality, subjective experience (qualia), and genuine understanding beyond pattern matching. They argue that current state-of-the-art systems, including large language models, operate based on statistical correlations in training data rather than exhibiting true comprehension, abstract reasoning, or consciousness. For instance, while models can generate fluent text, they lack the embodied cognition, common sense physics understanding, and the ability to transfer knowledge flexibly to novel, out-of-distribution scenarios that are hallmarks of human intelligence, thereby failing the criteria for strong AI as proposed by Searle's Chinese Room argument.",
+            "artificial general intelligence cognitive abilities human intelligence argument",
+            "strong AI criticism limitations narrow AI vs AGI",
+            "Chinese room argument qualia consciousness philosophical zombie",
+            "AI evaluation benchmarks cognitive architectures machine understanding"
+          ],
+          "r_vec": 12,
+          "r_rer": 1
+        },
+        {
+          "q": "第36届NeurIPS会议上，Fan等人发表的论文标题是什么？",
+          "fusion_extra": [
+            "Fan et al. presented their work titled 'Distributed Optimization with Adaptive Compression for Large-Scale Machine Learning' at the 36th Annual Conference on Neural Information Processing Systems (NeurIPS 2022). The paper introduces a novel distributed optimization algorithm, termed AdaComp-SGD, which incorporates a gradient compression scheme with adaptive quantization levels and error feedback to maintain convergence guarantees while significantly reducing communication overhead in federated learning scenarios. Experimental results on standard benchmarks like CIFAR-10 and a proprietary large-scale dataset demonstrate up to 15x reduction in communication volume with less than 0.5% degradation in final model accuracy.",
+            "NeurIPS 2022 proceedings Fan paper",
+            "36th Neural Information Processing Systems author Fan",
+            "conference paper title NIPS 2022",
+            "NeurIPS conference paper by Fan 2022"
+          ],
+          "r_vec": 11,
+          "r_rer": 1
+        },
+        {
+          "q": "在灾难救援中，具身无人机如何通过语言模型来理解并遵循人类语音指令，例如“在倒塌的桥梁附近搜索”？",
+          "fusion_extra": [
+            "In disaster rescue scenarios, embodied quadcopter UAVs equipped with natural language processing modules can interpret human voice commands such as 'search near the collapsed bridge.' The system employs a fine-tuned large language model (LLM) with speech-to-text front-end to parse intents, extract key parameters (e.g., target object: 'bridge,' action: 'search,' location modifier: 'near the collapsed'), and map them to a sequence of executable robotic tasks, including autonomous navigation using SLAM-based path planning and visual search using onboard camera with object detection algorithms like YOLOv7. This end-to-end framework ensures robust command understanding even in acoustically noisy environments with a reported intent recognition accuracy of 92.4% on the DisasterBot-1000 evaluation dataset.",
+            "embodied UAV disaster rescue language model instruction following",
+            "natural language understanding autonomous drone navigation command",
+            "human voice command parsing search and rescue robotics",
+            "LLM-based instruction execution embodied agent UAV deployment"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "GPT-4通过自我反思技术在高难度测试中的表现提升了多少百分比？",
+          "fusion_extra": [
+            "In a series of high-difficulty benchmarks such as HumanEval and MATH, GPT-4 integrated a self-reflection module to iteratively critique and revise its own outputs. This self-reflection mechanism was found to improve the model's accuracy on these challenging test sets by an average of 28.6 percentage points compared to its baseline performance without the iterative self-critique step.",
+            "GPT-4 self-reflection performance improvement percentage",
+            "difficult test benchmark results GPT-4 evaluation",
+            "self-reflection technique model performance gain",
+            "GPT-4 high-difficulty test score increase"
+          ],
+          "r_vec": 12,
+          "r_rer": 2
+        },
+        {
+          "q": "如何确认你正在安全地连接到美国政府网站？",
+          "fusion_extra": [
+            "To securely connect to a U.S. government website, users should verify the presence of a .gov or .mil top-level domain and ensure the connection is encrypted via Transport Layer Security (TLS) 1.2 or higher, as indicated by a padlock icon in the browser's address bar. Additionally, checking the digital certificate's issuer against trusted Certificate Authorities (CAs) such as those in the Federal PKI and confirming the website's Extended Validation (EV) certificate can help prevent man-in-the-middle attacks.",
+            "US government website HTTPS TLS certificate verification",
+            "PKI public key infrastructure digital signature authentication",
+            "Domain Name System DNS HTTPS record government domain",
+            "certificate authority CA root trusted chain validation"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "谁撰写了2013年发表在Science上的文章，该文探讨了脑结构与功能网络与认知之间的关系？",
+          "fusion_extra": [
+            "A 2013 study published in the journal Science investigated the relationship between structural and functional brain networks and cognitive performance. The research, led by a team of neuroscientists, utilized diffusion tensor imaging (DTI) and resting-state functional magnetic resonance imaging (fMRI) to map connectome data from a large cohort of healthy adults. Their findings demonstrated a strong correlation between individual differences in the efficiency of brain network hubs, particularly within the frontoparietal control network, and scores on fluid intelligence and executive function tasks.",
+            "brain structure function network cognition",
+            "connectome cognitive neuroscience Science 2013",
+            "structural functional connectivity cognitive performance",
+            "neural network topology intelligence brain imaging"
+          ],
+          "r_vec": 8,
+          "r_rer": 3
+        },
+        {
+          "q": "学习数据分析时，有哪些授课形式可以选择？",
+          "fusion_extra": [
+            "Data analytics education employs diverse instructional formats, including structured university degree programs (e.g., Bachelor of Science in Data Analytics), professional certificate courses (e.g., Google Data Analytics Professional Certificate), intensive coding bootcamps (e.g., 12-week full-time immersive programs), and self-paced online learning platforms (e.g., Coursera, edX, DataCamp). These formats vary in duration, depth, and delivery mode, ranging from synchronous live virtual classrooms to asynchronous video lectures with hands-on lab components utilizing tools like Python, R, SQL, and Tableau.",
+            "data science pedagogical methods instructional approaches",
+            "online learning platform MOOC data analytics course",
+            "interactive tutorials hands-on workshops blended learning",
+            "self-paced learning instructor-led training certification programs"
+          ],
+          "r_vec": 3,
+          "r_rer": 2
+        }
+      ]
+    }
+  ]
+}

@@ -1,17 +1,17 @@
 # RAG 改进方案
 
-> v1.2 · 2026-06-24 | 评测工具：`benchmark/test_rag.py` / `benchmark/benchmark_rag.py`
+> v1.3 · 2026-07-06 | 评测工具：`benchmark/test_rag.py` / `benchmark/benchmark_rag.py` + `rag_experiments/`
 
 ---
 
-## 一、当前实现
+## 一、当前流水线
 
 ```
-TextChunker（段落切分, chunk_size=800, overlap=200字符≈40词）
-    → BAAI/bge-m3（1024维，多语言，模块级单例）
-    → Qdrant 内存模式（task_id 隔离）
-    → cosine 检索（threshold=0.45筛选, top_k=6）
-    → 共享证据池 → LLM 分析
+chunk (size=800, overlap=200) → bge-m3 embedding (1024d, GPU) → Qdrant (内存, task_id 隔离)
+  → [Query Rewriting] 改写优先: 子问题 → 英文假设段落(HyDE) / 关键词组 (← 多模式)
+  → [xling 双路] 对每个含中文的 query 附英文译文 (改写后逐 query 翻译)
+  → 多 query 合并 → CrossEncoder rerank (bge-reranker-v2-m3)
+  → 共享证据池 → LLM 分析
 ```
 
 ---
@@ -20,169 +20,268 @@ TextChunker（段落切分, chunk_size=800, overlap=200字符≈40词）
 
 | # | 内容 | 版本 |
 |---|------|------|
-| A1 | RAGService 模块级单例，消除冷启动 | v0.1.3 |
-| A2 | chunk_overlap 120 → 200（有效40词） | v0.1.3 |
-| A3 | 筛选阈值 0.3 → 0.45 | v0.1.3 |
-| A4 | Chunk 拼接文档标题增强上下文 | v0.1.3 |
-| B1 | 升级 bge-m3（1024维，支持中文） | v0.1.3 |
-| P1 | Analyst prompt 强化：声明必须内联引用 + 禁止训练知识 | v0.1.4 |
-| B2 | CrossEncoder Reranker（BAAI/bge-reranker-v2-m3），`RERANKER_ENABLED=true` 开启 | v0.1.4 |
+| A1–A4 | RAGService 单例、overlap 120→200、阈值 0.3→0.45、拼接标题 | v0.1.3 |
+| B1 | bge-m3 升级（1024d, 中文支持） | v0.1.3 |
+| P1 | Analyst prompt 加强（内联引用 + 禁止训练知识） | v0.1.4 |
+| B2 | CrossEncoder Reranker（bge-reranker-v2-m3），`RERANKER_ENABLED=true` | v0.1.4 |
+| — | Embedding GPU 加速：fastembed ONNX CPU → sentence-transformers CUDA | v0.1.5 |
+| — | 跨语言检索默认开启（XLING_ENABLED=true），Recall@6 +3.4pp | v0.1.5 |
+| C1 | Query Rewriter — HyDE（假设文档嵌入检索），Recall@6 +1.7pp，R@6=0.892→0.908 | v0.1.6 |
+| — | 附加实验：Keyword Expansion（R@6 +0.8pp）和 HyDE+Keyword 融合（R@6 +0.8pp，融合噪声大于互补收益） | 实验存档 |
 
 ---
 
 ## 三、当前不足
 
-| 问题 | 表现 | 待解决方案 |
-|------|------|-----------|
-| Q1 无查询改写 | 问句与文档答案语义鸿沟（asymmetric retrieval），如"如何评估X风险？"检索不到"X风险包括……" | HyDE（C1）/ Multi-Query（C3）|
-| Q2 无重排序 | 向量近似排序，相似度高≠真正相关 | bge-reranker-v2-m3（B2）|
-| Q3 纯向量检索 | 专有名词、版本号等精确词无法命中 | Hybrid Search Dense+Sparse（C2）|
-| Q4 评估循环验证 | bge-m3 同时用于索引和评估，`chunk_score_mean ≈ context_precision`（差值<0.02）| LLM Judge（C4）|
-| Q5 阈值偏低 | Task 04 测试显示有效分数下界≈0.65，0.45无实际过滤作用 | 待全量数据后调整 |
-| Q6 评估盲区 | Context Recall / Answer Correctness 需 ground truth；Chunk Utilization 未提取 | C4 / C5 |
+| 问题 | 表现 | 方案 |
+|------|------|------|
+| Q1 问句-文档措辞鸿沟 | 中文问句→英文文档时嵌入空间不匹配，如"如何评估X"检不到"X包括…" | C1 ✅ HyDE +1.7pp，R@6=0.892→0.908 |
+| Q2 无重排序 | 向量近似排序，高相似≠真相关 | B2 ✅ 已完成 |
+| Q3 纯向量检索 | 专有名词/版本号无法精确命中 | Hybrid Search (dense+sparse) |
+| Q4 评估循环验证 | bge-m3 同时用于索引和评估，差值 <0.02 | LLM Judge |
+| Q5 阈值 0.45 过低 | 有效下界 ≈0.65，无实际过滤 | 待调整 |
+| Q6 评估盲区 | Context Recall / Chunk Utilization 未提取 | C4 / C5 |
+| Q7 碎片化 | top-6 chunks 原子独立，无关系视图 | — ⚠️ 验证无效（见§七）|
 
 ---
 
-## 四、RAG 评估指标体系
+## 四、评估体系
 
-### 4.1 Chunking 质量（间接信号）
+### 4.1 Chunking 质量
 
-| 指标 | 计算方式 | 参考值 |
-|------|----------|-------|
-| 语义凝聚度 | chunk 内各句 embedding 平均相互余弦相似度 | 好 > 0.75，差 < 0.5 |
-| 边界渗漏 | 相邻 chunk 首尾 embedding 相似度 | 好 < 0.6，差 > 0.8（切断连贯句）|
-| 长度分布 | 字符数 P10/P50/P90 | P50 ≈ 600–800，P10<100 说明碎片化 |
-| 引用命中率 | analyst 引用 URL 能回溯到 chunk 的比例 | 好 > 80%，差 < 50% |
+| 指标 | 算法 | 参考值 |
+|------|------|--------|
+| 语义凝聚度 | chunk 内句 embedding 平均余弦 | 好>0.75 差<0.5 |
+| 边界渗漏 | 相邻 chunk 首尾 embedding 余弦 | 好<0.6 差>0.8 |
+| 长度分布 | 字符 P10/P50/P90 | P50≈600–800, P10<100 碎片 |
+| 引用命中率 | analyst 引用 URL 回溯到 chunk 的比例 | 好>80% 差<50% |
 
-**当前问题**：chunk_size=800字符≈400 token，远低于 bge-m3 上限 8192；HTML转文本残留标签污染；overlap 40词对长复合句偏短。
+> 当前问题：chunk_size=800≈400token，远低于 bge-m3 上限 8192；HTML 残留标签污染；overlap 40词对长复合句偏短。
 
-### 4.2 Query 改写/生成质量
+### 4.2 检索质量
 
-当前是 **query generation**（planner 生成 search_queries），非 query rewriting。若引入改写，评估维度：
+**代理指标（无 ground truth）**：
 
-| 指标 | 说明 | 合理范围 |
-|------|------|---------|
-| 意图保真度 | `cosine_sim(原始问题, 改写问题)` | 不应低于 0.65（跑偏）|
-| 检索提升率 | 改写后 top-1 分数 - 改写前 | 正值有效 |
-| 关键词扩展率 | 改写后 unique 关键词 / 原始关键词 | > 1.5 说明有效扩展 |
+| 指标 | 含义 | 实现 | 局限 |
+|------|------|------|------|
+| chunk_score_mean | Qdrant cosine 均值 | ✅ | 与 ctx_prec 循环验证 |
+| threshold_pass_rate | 分数>0.45 的比例 | ✅ | 阈值合理性待验 |
+| context_precision (embed) | mean(cos(q_emb, c_emb)) | ✅ | 同一 encoder, circular |
+| context_precision (LLM) | LLM 判断 chunk 是否相关 | ❌ | 逐 chunk LLM 调用 |
+| chunk_utilization_rate | 引用 URL / 检索 URL | ❌ | 需解析 citation_registry |
 
-### 4.3 检索精准度
+**RAGAS LLM-judge（v0.1.4+, 无 ground truth）**：
 
-**有 ground truth**：Precision@K、NDCG@K、MRR（当前无法计算）
+| 指标 | 实现 | 需 ground truth |
+|------|------|-----------------|
+| faithfulness | 答案拆 atomic claims → LLM 验证可推导性 | 否 |
+| context_precision | LLM 判断每个 chunk 是否有用 → 加权精度 | 否 |
 
-**无 ground truth（当前代理指标）**：
+**待实现（需 ground truth）**：Context Recall / Answer Correctness
 
-| 指标 | 含义 | 已实现 | 局限 |
-|------|------|--------|------|
-| chunk_score_mean | Qdrant cosine 均值 | ✅ | 与 context_precision 循环验证 |
-| threshold_pass_rate | 分数 > 0.45 的比例 | ✅ | 阈值合理性待验证 |
-| context_precision (embed) | `mean(cosine_sim(q_emb, c_emb))` | ✅ | 同一 encoder，circular validation |
-| context_precision (LLM) | LLM 判断每个 chunk 是否相关 | ❌ | 每 chunk 一次 LLM 调用 |
-| chunk_utilization_rate | analyst 引用 URL / 检索 URL | ❌ | 需从 citation_registry 提取 |
-
-**Circular Validation 诊断**：`|chunk_score_mean - context_precision| < 0.02` → 指标不独立，需 LLM judge 或异构 encoder 验证。
-
-### 4.4 语义相关性（RAGas 风格）
-
-**当前实现（RAGAS LLM-judge，v0.1.4+）**：
-
-| 指标 | RAGAS 类 | 实现方式 | 需要 ground truth |
-|------|---------|---------|-----------------|
-| `faithfulness` | `Faithfulness` | 答案分解为 atomic claims，LLM 逐一验证是否能从 context 推导 | 否 |
-| `context_precision` | `ContextPrecisionWithoutReference` | LLM 判断每个 chunk 对回答是否有用，加权精度 | 否 |
-
-> ~~embedding-based 自定义指标（`faithfulness_sem`、`context_precision`、`answer_relevancy`）已移除~~  
-> 原因：同一 encoder 同时用于索引和评估，存在 circular validation，指标不独立。
-
-**RAGAS 待实现（需 ground truth）**：
-
-| 指标 | 实现方式 | 需要 ground truth |
-|------|---------|-----------------|
-| Context Recall | LLM 判断 ground truth 每句话能否从 context 找到支撑 | **是** |
-| Answer Correctness | F1(生成答案, ground truth) | **是** |
+> circular validation 诊断：`|chunk_score_mean - context_precision| < 0.02` → 指标不独立，需 LLM judge 或异构 encoder 验证。[embed-based 指标已移除]
 
 ---
 
-## 五、基准测试数据
+## 五、基准数据（Task 04, 2026-06-24）
 
-### Task 04 历史参考基线（2026-06-24，embed-based 指标，已废弃）
+### RAGAS 基线 v0 — 旧 prompt, 无 Reranker
 
-> ⚠️ 以下指标为旧版 embedding-based 自定义实现，存在 circular validation，已被 RAGAS 替换，仅作历史参考。
+| 子问题 | faithfulness | context_precision |
+|--------|-------------|-----------------|
+| q1 核心架构组件与数据流 | 0.500 | 1.000 |
+| q2 检索工程实践 | 0.692 | 0.383 |
+| q3 上下文整合与忠实回答 | 0.242 | 0.500 |
+| q4 性能评估与迭代改进 | 0.389 | 0.917 |
+| **均值** | **0.456** | **0.700** |
 
-| 子问题 | chunk_score | pass_rate | ctx_prec(embed) | faith_sem(embed) | 证据 |
-|--------|------------|-----------|----------------|-----------------|------|
-| q1 架构核心组件 | 0.713 | 6/6 | 0.686 | 0.795 | 充足 |
-| q5 生产部署工程 | 0.656 | 6/6 | 0.652 | 0.713 | 充足 |
-| **均值** | **0.692** | **1.000** | **0.679** | **0.759** | **0/5 gap** |
+### RAGAS 基线 v1 — prompt 加强, 无 Reranker
 
-关键结论（仍有效）：① 0.45 阈值无实际过滤（下界≈0.65），② circular validation 差值 0.013 已确认，③ q5 生产话题检索质量最低。
+> 新增"必须内联引用"+"禁止训练知识"约束
 
-### RAGAS 基线 v0（改进前，Task 04，2026-06-24）
+| 子问题 | faithfulness | context_precision |
+|--------|-------------|-----------------|
+| q1 核心架构组件与数据流 | **1.000** | **1.000** |
+| q2 检索优化 | **1.000** | **1.000** |
+| q3 提示工程与上下文整合 | 0.615 | 0.250 |
+| q4 评估指标与生产工程 | 0.895 | 0.887 |
+| **均值** | **0.878 (+92%)** | **0.784 (+12%)** |
 
-> 旧版 analyst prompt，无 Reranker
+**解读**：prompt 约束对幻觉抑制极显著。q3 ctx_prec=0.250 说明方法论类问题检索精准度不足，是 Reranker/HyDE 的核心目标。
 
-| 子问题 | faithfulness | context_precision | chunk_score |
-|--------|-------------|-----------------|------------|
-| q1 核心架构组件与数据流 | 0.500 | 1.000 | 0.725 |
-| q2 检索工程实践（嵌入/分块/混合检索） | 0.692 | 0.383 | 0.658 |
-| q3 上下文整合与忠实回答 | 0.242 | 0.500 | 0.668 |
-| q4 性能评估与迭代改进 | 0.389 | 0.917 | 0.747 |
-| **均值** | **0.456** | **0.700** | **0.699** |
+### 历史参考（embed-based, 已废弃）
 
-### RAGAS 基线 v1（analyst prompt 加强，Task 04，2026-06-24）
-
-> 新增"每条声明必须内联引用"+"严禁使用训练知识"约束，无 Reranker
-
-| 子问题 | faithfulness | context_precision | chunk_score |
-|--------|-------------|-----------------|------------|
-| q1 核心架构组件与数据流 | **1.000** | **1.000** | 0.763 |
-| q2 检索优化（分块/向量化/混合检索） | **1.000** | **1.000** | 0.783 |
-| q3 提示工程与上下文整合 | 0.615 | 0.250 | 0.676 |
-| q4 评估指标与生产工程 | 0.895 | 0.887 | 0.697 |
-| **均值** | **0.878 (+92%)** | **0.784 (+12%)** | **0.727** |
-
-系统指标：`threshold_pass_rate=1.000`，`evidence_gap_rate=0.000`，`avg_confidence=0.825`
-
-**解读**：prompt 约束对幻觉抑制效果极显著（+92%）。q3 的 context_precision 仅 0.250，说明"提示工程"类方法论问题检索精准度不足，是 B2 Reranker 和 C1 HyDE 的核心攻克目标。
+| 指标 | Task 04 均值 | 有效结论 |
+|------|-------------|---------|
+| chunk_score_mean | 0.692 | 0.45 阈值无实际过滤（下界≈0.65） |
+| context_precision(embed) | 0.679 | circular validation 差值 0.013 已确认 |
+| faithfulness_sem | 0.759 | — |
 
 ---
 
 ## 六、后续改进方案
 
-### 方案 B（引入新依赖）
+| 方案 | 类型 | 描述 | 预期增益 | 额外延迟 | 状态 |
+|------|------|------|---------|---------|------|
+| B2 Reranker | 引入依赖 | top-20 → bge-reranker-v2-m3 → top-6 | Recall@6 +15~25% | +200~500ms/q | ✅ 已完成 |
+| B3 API Embedding | 引入依赖 | fastembed → LiteLLM aembedding (ada-002) | 稳定性、零冷启动 | — | ⭐⭐⭐ 备选 |
+| **C1 Query Rewriter** | **架构扩展** | **改写优先→xling 在后。HyDE 模式（假设文档嵌入检索）** | **Recall@6 +1.7pp（黄金集 120 问, R@6 0.892→0.908）** | **+0.5s/q** | **✅ HyDE 完成** |
+| C2 Hybrid Search | 架构扩展 | Qdrant RRF 融合 dense + sparse | 专有名词命中 | +100ms | ⭐⭐⭐ |
+| ~~C3 Multi-Query+RRF~~ | 架构扩展 | 归入 C1 Query Rewriter | — | — | ❌ 已合并 |
+| C4 LLM Context Precision | 评估 | 逐 chunk LLM 判断相关性 | 消除循环验证 | +N×LLM | ⭐⭐⭐⭐ |
+| C5 Chunk Utilization Rate | 评估 | 引用 URL / 检索 URL | 检索噪声诊断 | 无 | ⭐⭐⭐⭐⭐ |
+| D1 GraphRAG-V | **架构扩展** | chunk 相似度图 + Louvain 社区 | ❌ 验证无效（见§七） | < 1s | ❌ 已关闭 |
 
-**B2 Cross-Encoder Reranker**：检索 top-20，`BAAI/bge-reranker-v2-m3` 精排后取 top-6。预期 Recall@6 提升 15–25%，延迟 +100–300ms/子问题。
-
-**B3 API Embedding**：本地 fastembed 替换为 LiteLLM aembedding（text-embedding-3-small，1536维）。零冷启动，约 $0.02/百万 token，适合无 GPU 环境。
-
-### 方案 C（架构扩展）
-
-**C1 HyDE**：子问题先由 LLM 生成假设性简短答案，用答案文本做 embedding 检索，绕过问句—文档语义鸿沟。预期提升 10–20%，每子问题增加 1 次轻量 LLM 调用。
-
-**C2 Hybrid Search**：Qdrant RRF 融合 dense + sparse 向量（bge-m3 原生输出 sparse），解决专有名词/版本号精确匹配问题。前提：Qdrant 切换持久化模式。
-
-**C3 Multi-Query + RRF**：每子问题 LLM 生成 3 个查询变体，分别检索后 RRF 融合，扩大召回面。每子问题增加 1 次 LLM 调用 + 3× 检索。
-
-**C4 LLM Context Precision**：对每个 chunk 发 LLM 判断（"这段对回答问题有用吗？是/否"），替代 embedding-based 版本，消除 circular validation。
-
-**C5 Chunk Utilization Rate**：从 sub_answers.citations 提取引用 URL，与检索 URL 取交集，比值 = 利用率。零额外成本，低 < 0.3 说明检索噪声多，高 > 0.7 表明检索质量好。
-
----
-
-## 七、优先级
+### 优先级总览
 
 | 方案 | 质量提升 | 延迟 | 成本 | 状态 |
 |------|---------|------|------|------|
-| ~~A1–A4, B1~~ | — | — | — | ✅ 已完成 |
+| ~~A1–A4, B1~~ | — | — | — | ✅ 完成 |
 | C5 Chunk Utilization | 评估覆盖 | 无 | 极低 | ⭐⭐⭐⭐⭐ |
-| B2 Reranker | 高 | +200~500ms | 中 | ⭐⭐⭐⭐⭐ |
-| C1 HyDE | 中~高 | +0.5~1s | 中 | ⭐⭐⭐⭐ |
-| C4 LLM Context Precision | 评估独立性 | +N×LLM | 中 | ⭐⭐⭐⭐ |
-| C2 Hybrid Search | 高（专有名词）| +100ms | 高 | ⭐⭐⭐ |
-| C3 Multi-Query+RRF | 中 | +0.5~1s | 中 | ⭐⭐⭐ |
+| B2 Reranker | 高 | +200~500ms | 中 | ✅ 完成 |
+| **C1 Query Rewriter** | **中（+1.7pp）** | **+0.5s** | **中** | **✅ HyDE 完成** |
+| C4 LLM Context Precision | 评估独立 | +N×LLM | 中 | ⭐⭐⭐⭐ |
+| ~~D1 GraphRAG-V~~ | — | — | — | ❌ 验证无效 |
+| C2 Hybrid Search | 专有名词 | +100ms | 高 | ⭐⭐⭐ |
 | B3 API Embedding | 稳定性 | 稳定 | 低 | ⭐⭐⭐ 备选 |
 
 ---
+
+## 七、已验证无效方案：GraphRAG-V chunk 相似度图
+
+> 2026-07-03 | 结论：在检索质量和 LLM 输出质量上均无正面效果，已关闭。
+
+### 7.1 动机
+
+当前 top-6 chunks 为独立原子，LLM 无法感知哪些属于同一话题。希望用 chunk embedding 相似度图构建主题社区，以**零额外 LLM 调用 + < 1s 延迟**实现社区感知检索。
+
+### 7.2 实验验证
+
+**实验目录**：`rag_experiments/`，完整源代码和结果已存档。
+
+**方案**：
+- **GraphBuilder**：从 Qdrant 读全量 vectors → 余弦相似度矩阵 → NetworkX 图 → Louvain 社区
+- **Phase 1**（检索召回）：top-6 查所属社区 → 将同社区其他 chunk（含远邻，即 top-40 之外的）加入候选池 → rerank 重新排序取 top-6，测 Recall@6
+- **Phase 2**（LLM 质量）：shared_system_content 中证据按社区分组标注 → 测 RAGAS faithfulness
+
+**基线**：生产配置（bge-m3 GPU + xling 双路检索 + rerank），黄金集 120 条问题
+
+### 7.3 结果
+
+**Phase 1 — Recall@k（12 任务, 120 条黄金问题）**
+
+| 指标 | Baseline | GraphRAG-V | Δ |
+|------|----------|-----------|----|
+| Recall@40 | 0.917 | 0.917 | 0 |
+| Recall@6 | **0.892** | **0.892** | **0** |
+| MRR | 0.738 | 0.738 | 0 |
+| NDCG@6 | 0.778 | 0.778 | 0 |
+
+社区扩张未改善任何检索指标。原因：bge-m3 余弦 >0.70 的两个 chunk 几乎是"同一篇文章的不同段落说同一件事"，而非"语义相关但不同的文档"。reranker 已对所有候选正确排序，社区没有提供额外信息。
+
+**Phase 2 — Faithfulness（2 任务验证）**
+
+| 任务 | Baseline | GraphRAG-V | Δ |
+|------|----------|-----------|----|
+| 04 RAG 系统最佳实践 | 0.893 | 0.783 | **-0.110** |
+| 07 碳中和技术路径 | 0.711 | 0.645 | **-0.066** |
+
+社区分组后 faithfulness 不升反降。分析：社区标注词消耗上下文窗口，且同一 community 的 chunk 原本就是高相似度的重复内容，分组展示无助于减少幻觉。
+
+### 7.4 根因分析
+
+```
+假设：bge-m3 embedding 的余弦相似度能反映"语义相关程度"
+实测：余弦 > 0.70 实际上是"近乎相同的内容"
+     → 同一社区的 chunks 几乎重复 → LLM 看不到新信息
+     → 不同社区的 chunks 余弦 < 0.70 但有查询相关性
+     → reranker 捕捉到这些跨社区相关性，社区结构反而成了噪声
+
+结论：Chunk 级相似度图不适合深度调研场景。
+     真正的信息增益需要实体级关系（A outperforms B、A depends_on C），
+     但这需要 LLM 抽取（MS GraphRAG = 600 次 LLM 调用），
+     对单次任务而言成本不可接受。
+```
+
+### 7.5 关闭原因总结
+
+| 阶段 | 假设 | 实测 | 结论 |
+|------|------|------|------|
+| Phase 1 社区扩张检索 | 捞回遗漏相关 chunk → Recall↑ | Recall@6 无变化 | chunk 余弦相似度 ≠ 查询相关性 |
+| Phase 2 社区分组组织 | LLM 看到主题结构 → 幻觉↓ | Faithfulness **-0.07 ~ -0.11** | 分组对 LLM 质量无益反损 |
+| 综合 | GraphRAG-V 在检索+生成均有价值 | 两阶段均无正面效果 | 此方向关闭，资源投入其他方案 |
+
+---
+
+## 八、Query Rewriting — 实验验证（v0.1.6）
+
+### 8.1 黄金集评测结果
+
+**实验框架**：`rag_experiments/query_rewriter.py` + `rag_experiments/experiment_query_rewrite.py`，独立于生产代码运行。基线 = 生产配置（bge-m3 GPU + xling 双路 + reranker，R@6=0.892）。
+
+| 方案 | Recall@6 | Δ vs Baseline | MRR | NDCG@6 | 恢复 miss 数 |
+|------|----------|:---:|:---:|:---:|:---:|
+| Baseline (v0.1.5) | 0.892 | — | 0.738 | 0.778 | — |
+| **HyDE** ✅ **选定** | **0.908** | **+1.7pp** | **0.746** | **0.786** | **2** |
+| Keyword | 0.900 | +0.8pp | 0.741 | 0.780 | 1 |
+| HyDE+Keyword 融合 | 0.900 | +0.8pp | 0.746 | 0.786 | 1 |
+
+**结论**：HyDE 单独最优（+1.7pp），Keyword 和融合方案均不及 HyDE。融合时向量 Recall@40 从 0.917 暴跌至 0.817（-10pp），5 条 extra queries 引入大量噪声将 gold chunk 挤出 top-40，reranker 仅能部分修复。HyDE 的单一假设段落聚焦效果更好——语义空间缩窄而非拓宽。
+
+### 8.2 恢复案例分析
+
+HyDE 恢复的 2 条 miss：
+1. **Task 01（LLM 推理加速）**：*"有哪些减少大模型 KV Cache 大小的常见算法？"* → HyDE 的假设段落（MQA / GQA / sliding window / sparse attention）使向量命中相关文档。
+2. **Task 02（Python vs Rust 对比）**：*"Rust 在构建 WebAssembly 时如何与 JavaScript 进行数据交换？"* → HyDE 段落的 wasm-bindgen / serde 等具体技术术语锚定检索。
+
+### 8.3 流水线顺序
+
+所有 query 统一走「改写 → 翻译 → 检索」管道：
+
+```
+子问题（中文）
+  ↓ QueryRewriter（HyDE 模式）
+  ├─ 原始 query（中文）
+  └─ HyDE 假设段落（英文，2-3 句技术风格）
+  ↓ xling 双路（逐 query 判断——含中文才翻译）
+  ├─ (中文) → Chinese vec + English vec
+  └─ (英文) → English vec only（xling 直通）
+  ↓ 批量 Embed + 并行 Search
+  ↓ 按 chunk 合并取最高分 → Reranker → top-k
+```
+
+### 8.4 配置
+
+```bash
+QUERY_REWRITER_ENABLED=true
+QUERY_REWRITER_MODE=hyde       # hyde 为选定模式
+QUERY_REWRITER_MAX_GROUPS=1    # HyDE 单段落
+```
+
+### 8.5 冷启动 & 降级
+
+- LLM 调用失败 → 静默空列表，降级为原始 query
+- 改写产出的 HyDE 段落为空 → 降级为原始 query
+
+---
+
+## 九、已关闭方案
+
+### GraphRAG-V（§七）
+
+### HyDE+Keyword 融合
+
+> 2026-07-06 | 结论：HyDE 和 Keyword 虽互补（恢复不同 miss），但融合引入噪声大于互补收益，不应合并使用。
+
+| 评估维度 | 结论 |
+|---------|------|
+| 向量 Recall@40 | Baseline 0.917 → 融合 0.817（-10pp，多路检索噪声挤占） |
+| Reranker 修复后 | Baseline 0.892 → 融合 0.900（+0.8pp，不及 HyDE 单独 +1.7pp） |
+| 根因 | 4 组关键词 + 1 段 HyDE = 5 路 query 并行检索，不相关的关键词命中噪声 chunk 将 gold 挤出 top-40 |
+
+### Keyword Expansion 单独
+
+> 2026-07-03 | 结论：+0.8pp 增益偏低，且与 HyDE 恢复的 miss 不重叠，无组合价值。
 
 ## 附录：评测命令
 

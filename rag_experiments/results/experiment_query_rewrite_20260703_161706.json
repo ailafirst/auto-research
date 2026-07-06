@@ -1,0 +1,383 @@
+{
+  "config": {
+    "embedding_model": "BAAI/bge-m3",
+    "retrieve_k": 40,
+    "rerank_k": 6,
+    "rerank_enabled": true,
+    "xling_enabled": true
+  },
+  "schemes": [
+    "baseline",
+    "hyde"
+  ],
+  "tasks": [
+    "01",
+    "04",
+    "07"
+  ],
+  "elapsed_seconds": 116.5,
+  "baseline": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "r_vec": 5,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "r_vec": 20,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "r_vec": 9,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "r_vec": 2,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "r_vec": 11,
+          "r_rer": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "r_vec": 66,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "r_vec": 7,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    }
+  ],
+  "hyde": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "hyde_passage": "W4A16 asymmetric quantization, where model weights are quantized to 4-bit integers while activations remain in 16-bit precision, is particularly advantageous for deploying large language models on memory-constrained edge devices such as smartphones, IoT endpoints, and embedded systems. The primary application scenario involves performing on-device inference for tasks like natural language understanding, speech recognition, and computer vision, where the technique reduces model memory footprint by up to 75% compared to FP16 models, enabling execution within limited RAM budgets (e.g., under 4GB) while maintaining accuracy close to the full-precision baseline through its asymmetric calibration of activation ranges.",
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "hyde_passage": "The Base64 string parsed from the provided text fragment was examined for line break characters. The analysis, performed using regular expression pattern matching (e.g., `\\n`, `\\r`), confirmed the absence of newline characters (CR, LF, CRLF) within the encoded string, adhering to the MIME standard (RFC 4648) for a single continuous line of Base64 data. Consequently, no preprocessing step was required to remove whitespace before decoding the payload.",
+          "r_vec": 16,
+          "r_rer": 6
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "hyde_passage": "The ToMe (Token Merging) method for multi-head attention reduces computational complexity by merging redundant tokens within each attention head. Specifically, it calculates a similarity score between tokens using their key vectors, identifies the most similar token pairs based on these scores, and merges them by averaging their value vectors and scaling the attention output accordingly. This process is applied independently to each of the H attention heads, allowing the model to maintain representational diversity across heads while reducing the sequence length for subsequent layers.",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "hyde_passage": "In benchmark evaluations on the HumanEval dataset, Marlin-AWQ achieved a Pass@1 score of 74.4% and a throughput of 24.2 tokens per second on a single NVIDIA A100 80GB GPU using 4-bit quantized weights with the Marlin kernel for accelerated inference. This represents a significant improvement over standard GPTQ implementations while maintaining comparable accuracy to the full-precision model.",
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "hyde_passage": "The Xilinx Alveo U280 FPGA, utilizing the UltraScale+ HBM architecture, achieves a throughput of 4.8 tokens/s during the autoregressive decoding phase for a 13B parameter language model when optimized with INT8 quantization and a custom RTL decoder pipeline. In comparison, the VCK5000 Versal adaptive SoC, with its integrated AI Engine and DDR5 memory subsystem, demonstrates a higher throughput of 7.2 tokens/s under identical workload conditions, leveraging hardware-accelerated attention mechanisms. The newer VHK158, based on the Versal Premium VP1802 platform, further improves performance to 9.5 tokens/s through advanced memory coherency protocols and a multi-die fabric for reduced inter-chiplet latency.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "hyde_passage": "LLM in a Flash introduces a windowing-based mechanism to improve inference efficiency for large language models on memory-constrained devices like smartphones. The system employs a technique called 'flash-based windowing' that strategically loads only the most critical portions of model weights and key-value (KV) cache from flash memory into DRAM in a compressed format, using a prioritized scheduling algorithm based on attention score distributions. This approach achieves a significant reduction in I/O operations and energy consumption, enabling the execution of models with billions of parameters on mobile hardware while maintaining competitive accuracy.",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "hyde_passage": "In standard Transformer models, sparse attention methods are employed to reduce the quadratic computational complexity of the self-attention mechanism from O(n²) to O(n log n) or O(n). Key types include Local Sparse Attention (LSA), which restricts each token to attend only to a fixed-size local window, and Global Sparse Attention (GSA), which designates a small set of special global tokens that can attend to all positions. Additionally, Dilated Sparse Attention introduces a dilation factor to expand the local window's receptive field without increasing parameter count, while Random Sparse Attention assigns a fixed number of random connections per token to capture long-range dependencies stochastically.",
+          "r_vec": 17,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "hyde_passage": "Deploying large language models in resource-constrained edge environments presents significant obstacles, primarily due to the models' substantial parameter counts (e.g., 7B to 70B parameters) requiring extensive GPU VRAM (≥24GB) and high memory bandwidth, which far exceed the capabilities of typical edge hardware like mobile SoCs or embedded FPGAs with limited DRAM (often <8GB). Furthermore, the computational intensity of transformer self-attention mechanisms leads to high inference latency and power consumption, making real-time inference impractical without aggressive model compression techniques such as quantization (e.g., 4-bit or 8-bit weights) or knowledge distillation into smaller student models.",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "hyde_passage": "The training cost of BK-SDM, a compressed variant of Stable Diffusion, is approximately 1/10 that of the original model, achieved through a combination of knowledge distillation, architectural pruning, and quantization-aware training techniques. Experiments demonstrate that BK-SDM retains over 95% of the original model's FID score on the COCO 2017 dataset while reducing GPU memory consumption by 40% and training time by an order of magnitude on 4x NVIDIA A100 GPUs.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "hyde_passage": "A study by Patel et al. published on arXiv three weeks prior examined the efficiency gains in transformer architectures using dynamic sparse attention mechanisms. The paper, titled \"Adaptive Sparse Attention for Efficient Long-Context Transformers,\" demonstrated a 40% reduction in FLOPs while maintaining 98% of the baseline model's perplexity on the PG-19 dataset.",
+          "r_vec": 20,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "hyde_passage": "In retrieval-augmented generation (RAG) systems, fine-tuning the embedding model on domain-specific data significantly improves retrieval recall and precision by learning task-relevant semantic representations. This enhancement in retrieval quality directly leads to more accurate and contextually relevant answer generation by the language model, despite the added complexity of the fine-tuning pipeline. Experimental results on benchmarks like Natural Questions and TriviaQA show that fine-tuned embedding models can increase top-1 document retrieval accuracy by 15-20% compared to using off-the-shelf general-purpose embeddings.",
+          "r_vec": 46,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "hyde_passage": "在实现基于语义元数据过滤的混合检索系统时，必须首先调用VectorStoreManager类的getSchemaInfo()方法，以验证目标向量数据库（如Milvus或Pinecone）的集合（Collection）结构是否正确配置。该查询会返回包含向量维度、字段类型及元数据索引（如文本的category和date字段）的JSON Schema定义，确保后续的基于属性的过滤查询（如\"category='science' AND date >= '2023-01-01'\"）能正确执行。此步骤是构建可扩展检索管道的基础，用于在语义搜索前确保数据模型一致性。",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "hyde_passage": "The function calling API within OpenAI Assistants enables developers to define custom functions that the model can invoke during a conversation. When a user's query matches a predefined function, the model generates a structured JSON object specifying the function name and its arguments, which the backend system then executes. This capability allows the assistant to interact with external APIs, databases, and services in real-time, extending its functionality beyond text generation to perform actionable tasks like retrieving live data or triggering workflows.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "hyde_passage": "The LIDC (Lung Image Database Consortium) dataset uses session-based access where authentication cookies are issued to users for a predefined validity period. For LIDC cookie authentication, the session cookie is configured with a maximum duration of 180 days, after which users must re-authenticate to regain access to the CT image repository and annotation data.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "hyde_passage": "Large language models (LLMs) may omit critical details in their responses due to attention mechanisms prioritizing salient but incomplete information, as observed in attention head weight distributions where key entities receive disproportionately low attention scores. This phenomenon, sometimes termed 'contextual information dropout,' can be exacerbated by the softmax temperature during generation, which favors high-probability but less comprehensive token sequences. Empirical studies on models like LLaMA-2-70B show that applying chain-of-thought prompting or explicitly instructing the model to 'enumerate all details' can reduce omission rates by up to 30% in factual recall tasks.",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "hyde_passage": "For production-grade Retrieval-Augmented Generation (RAG) systems, Qdrant is recommended for data scales ranging from tens of millions to billions of high-dimensional vectors, particularly when requiring high-performance approximate nearest neighbor (ANN) search with vector quantization and on-disk indexing for memory efficiency. Benchmarking studies indicate that Qdrant maintains query latency under 50 milliseconds for datasets up to 100 million 1536-dimensional vectors on a single node with quantization enabled, making it suitable for enterprise-scale document retrieval pipelines integrated with models like GPT-4 or BERT-based re-rankers.",
+          "r_vec": 5,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "hyde_passage": "在构建高效的客服问答系统时，检索增强生成技术需要重点优化几个核心性能特性。首先是检索延迟，系统必须在毫秒级时间内从海量企业知识库（如包含数百万份文档的向量数据库）中召回相关片段，以确保用户交互的实时性。其次是生成结果的准确性与事实一致性，通常通过严格的相关性过滤、重排序以及事实性校验模块来降低幻觉率，并确保答案与企业标准话术保持一致。此外，系统的可扩展性、多轮对话上下文的维护能力以及对领域专业术语的精确理解也是评估其性能的关键指标。",
+          "r_vec": 86,
+          "r_rer": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "hyde_passage": "During the data extraction phase of a Retrieval-Augmented Generation (RAG) pipeline, Optical Character Recognition (OCR) scanning may fail due to several factors including low document contrast, complex page layouts with multi-column text, non-standard fonts or handwritten content, and significant image noise or skew. Additionally, the presence of embedded graphics, watermarks, or color gradients can interfere with text detection algorithms, leading to incomplete or erroneous character recognition. These failures result in corrupted text chunks that degrade the quality of the vector embeddings and subsequent retrieval accuracy.",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "hyde_passage": "Using a representative sample of real user queries during embedding model testing helps prevent retrieval performance degradation and poor downstream task accuracy when deployed to production. By capturing the actual distribution of user intents, query lengths, and terminology, this approach ensures the model's vector space accurately reflects real-world data patterns, mitigating issues like semantic drift or mismatch between evaluation and live traffic conditions.",
+          "r_vec": 91,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "hyde_passage": "RAG Fusion enhances semantic search efficiency in Retrieval-Augmented Generation (RAG) applications through a multi-stage process involving reciprocal rank fusion (RRF). In this approach, the system first generates multiple queries or query variations for a single user intent and performs parallel retrieval from the vector database. The results from these parallel searches are then combined using a scoring algorithm, such as the Reciprocal Rank Fusion formula, which re-ranks documents based on their aggregate rank across all retrieval streams, thereby improving the relevance and diversity of the context fed to the language model.",
+          "r_vec": 10,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "hyde_passage": "According to the Massachusetts Department of Environmental Protection (MassDEP) annual report for the Regional Greenhouse Gas Initiative (RGGI), the state auctioned a total of 18.7 million short tons of CO2 equivalent allowances for the 2023 compliance period. The auction, conducted quarterly, achieved a clearing price of $13.50 per ton, with proceeds directed toward energy efficiency and renewable energy programs. This allocation represented the state's full RGGI allowance budget for the year, consistent with the cap-and-trade program's declining emissions cap.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "hyde_passage": "Under the third phase of the Korean Emissions Trading System (K-ETS), which covers the period 2021-2025, entities subject to compliance obligations are permitted to use offset credits to meet a portion of their annual emissions allowance surrender requirement. Specifically, the quantitative limit for the use of domestic offset credits, certified under the Domestic Offset Credit Scheme, is set at 5% of each regulated entity's annual compliance obligation, measured in CO2 equivalent tonnes. This cap is designed to ensure the market's integrity while providing cost-containment flexibility for participants.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "hyde_passage": "The EU Emissions Trading System (ETS) 2 is set to expand its coverage to include the transport and buildings sectors starting from January 1, 2027. This extension is part of the 'Fit for 55' package and will initially apply to upstream fuel distributors, with a market stability reserve mechanism designed to control the supply of allowances and prevent excessive price volatility during the initial implementation phase.",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "hyde_passage": "Under the EU's Carbon Border Adjustment Mechanism (CBAM), importers are required to submit an annual CBAM declaration to the competent authority of the Member State. This declaration, which must be submitted by 31 May each year covering the preceding calendar year, details the total embedded emissions of imported goods and the corresponding financial adjustment, using the Union's Emissions Trading System (ETS) price. The CBAM transitional phase, currently in effect, mandates quarterly reporting of emissions data ahead of the definitive system's financial obligations starting in 2026.",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "hyde_passage": "Based on an integrated assessment model incorporating trade elasticity and abatement cost curves, a carbon border adjustment mechanism (CBAM) set at a rate of 100 EUR per metric ton of CO2 equivalent would impose a significant price shock on Chinese steel and aluminum exports to the EU. Projections for 2030 indicate this would incentivize a 15-20% absolute reduction in embodied carbon within these export flows, primarily driven by fuel switching and process efficiency upgrades in integrated steel plants and aluminum smelters facing the tariff.",
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "hyde_passage": "DNV provides comprehensive professional support to enterprises navigating carbon pricing policies, including carbon footprint assessment using the GHG Protocol, strategy development for emissions trading systems (ETS), and compliance management for regulations like the EU ETS and China's national carbon market. Their services encompass lifecycle carbon accounting, carbon credit project development under Article 6 of the Paris Agreement, and scenario analysis for internal carbon pricing mechanisms, supported by industry-specific benchmarks and risk quantification frameworks.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "hyde_passage": "代码721260在国际贸易商品分类系统中通常指代热浸镀锌或镀铝锌的铁或非合金钢的扁平轧制品，具体包括厚度小于3毫米的板材、带材及类似形状的冷轧或热轧产品。该HS编码（海关编码）下的产品在国际贸易统计中常用于区分特定处理的钢材，其贸易数据在世界海关组织（WCO）的年度报告中被归类于第72章钢铁制品项下。",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "hyde_passage": "Under the EU Carbon Border Adjustment Mechanism (CBAM), the price of embedded emissions certificates is determined by the weekly average auction price of EU Emissions Trading System (ETS) allowances. Specifically, the certificate price is calculated based on the closing price of the most recent December futures contract for EU ETS allowances, published by the European Energy Exchange (EEX). This alignment ensures the CBAM certificate price reflects the current carbon price that EU producers face, thereby preventing carbon leakage and maintaining fair competition.",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "hyde_passage": "Wang Haijun's 2018 publication on the challenges of the MRV (Measurement, Reporting, and Verification) system within China's national carbon emission trading scheme is referenced with DOI 10.1016/j.eneco.2018.04.020. The paper analyzes critical issues such as data quality assurance, verification standards, and regulatory enforcement mechanisms essential for the integrity of China's carbon market established under the Paris Agreement commitments.",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "hyde_passage": "In the fifth issue of World Knowledge magazine published in 2023, the article by Su Qingyi examines the evolving dynamics of global trade governance amid geopolitical realignments. The paper, titled 'The Fracturing of Global Value Chains and the Path Forward,' analyzes regional trade agreements like the CPTPP and RCEP as potential frameworks for restructuring supply chains. It presents econometric data showing a 15% increase in intra-regional trade flows within ASEAN+3 economies from 2020 to 2022, contrasting this with a 7.5% decline in trans-Pacific merchandise trade.",
+          "r_vec": 2,
+          "r_rer": 1
+        }
+      ]
+    }
+  ]
+}

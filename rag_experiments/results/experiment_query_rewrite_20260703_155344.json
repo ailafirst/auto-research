@@ -1,0 +1,2068 @@
+{
+  "config": {
+    "embedding_model": "BAAI/bge-m3",
+    "retrieve_k": 40,
+    "rerank_k": 6,
+    "rerank_enabled": true,
+    "xling_enabled": true,
+    "rewrite_mode": "keyword",
+    "rewrite_num_groups": 4
+  },
+  "schemes": [
+    "baseline",
+    "keyword"
+  ],
+  "tasks": [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12"
+  ],
+  "baseline": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "r_vec": 5,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "r_vec": 20,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "records": [
+        {
+          "q": "Python通过什么方式让分析师能够高效地处理大型数据集？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Python 和 Java 在语法、类型、性能、OOP 特性和使用案例这五个方面有哪些具体差异？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust代码示例中，尝试修改已释放内存的引用为何会引发编译错误？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "JetBrains为Rust学习者提供了哪些免费学习资源？",
+          "r_vec": 2,
+          "r_rer": 3
+        },
+        {
+          "q": "根据文本，什么因素解释了Rust开发者一旦尝试就坚持使用它？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "这篇文章涉及哪个编程语言？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "在这个Rust并发示例中，最终计数器值是如何确保为100000的？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust中，如何使用模式匹配来根据玩家的方向执行相应的移动操作？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "哪些大型公司在部分项目中采用了Rust编程语言？",
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "Rust通过哪些具体机制来提升性能并避免不必要的系统减速？",
+          "r_vec": null,
+          "r_rer": null
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "records": [
+        {
+          "q": "十年前生成式AI被认为不可能的主要原因有哪些？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "传统查找算法中，平均比较次数是多少？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算机使用Shor算法分解一个1000位的大数需要多长时间？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "在量子计算中，为什么单次执行算法通常无法得到可靠结果？",
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "量子计算目前的错误率通常高于多少百分比？",
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "经典计算中数据是如何表示和处理的？",
+          "r_vec": 16,
+          "r_rer": 3
+        },
+        {
+          "q": "这家公司的电子邮件联系地址是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在量子计算领域，企业为获得量子优势在人才方面主要面临什么挑战？",
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算的关键技术概念有哪些？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "BlueQubit量子计算软件集成了哪些具体的开源库？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "r_vec": 7,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "r_vec": 2,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "r_vec": 11,
+          "r_rer": 5
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "r_vec": 66,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "records": [
+        {
+          "q": "英伟达最新旗舰GPU H200相比前代H100的性能提升幅度是多少？",
+          "r_vec": 40,
+          "r_rer": null
+        },
+        {
+          "q": "解决方案提供商领导者为什么认为像Gaudi 3这样的成本效益高的AI系统可能有市场？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Intel在Deutsche Bank分析师会议上提到的云迁移观点与Nvidia的生态系统策略有何关联？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2026年，固定宽带平均月费最高的国家是哪个？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "ClusterMax评估工具针对哪些GPU型号的Neocloud集群进行排名？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "海光信息上半年市场推广费用的同比增长率是多少？",
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "AMD的哪些具体加速器型号被特别指出对NVIDIA的市场主导地位构成挑战？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Nvidia和AMD被要求在何时前提交最终评论和性能改进反馈？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "英伟达的市值在五月达到了多少万亿美元？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "根据技术基准，中国AI模型与美国模型相比在能力上是否存在显著差距？",
+          "r_vec": 16,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "records": [
+        {
+          "q": "J, Creemers R (2023) 在关于中国网络空间管理机构的研究中主要描述了哪些方面？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "Hao Huang是哈佛法学院法学硕士项目的哪一届学生？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "2023年10月21日生效的“英美数据桥”如何简化美英之间的数据跨境传输？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "对于危害程度高但发生概率低的数据，在重要数据识别中应如何判定？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "认证机构在做出个人信息保护认证决定时，依据哪些材料和报告？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "如果Comp.CN的数据传输行为导致数据主体受损，它与Comp.EU应如何共同承担法律责任？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "网站指南的分类有哪些？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "PIPL和GDPR在认定未成年人的个人信息是否属于敏感数据方面有何不同？",
+          "r_vec": 8,
+          "r_rer": null
+        },
+        {
+          "q": "数据保护机构在采纳标准数据保护条款时，需要依据哪些具体条款？",
+          "r_vec": 46,
+          "r_rer": null
+        },
+        {
+          "q": "在什么条件下学术研究机构使用个人资料进行统计分析并发表研究成果可被认定为适法的特定目的外利用？",
+          "r_vec": 15,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "r_vec": 7,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "records": [
+        {
+          "q": "文本中提到Agentic AI的质量离不开什么类型的数据？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "根据描述，仅用于匿名统计目的的信息在哪些条件下可能被用来识别个人？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "COFIBA算法在哪些关键方面与LinUCB算法有所区别？",
+          "r_vec": 3,
+          "r_rer": 3
+        },
+        {
+          "q": "在特征组数据摄取后，哪些特征组的计数被添加到了ps字典中？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "bandit算法中累积遗憾的数学表达式是什么？",
+          "r_vec": 2,
+          "r_rer": 5
+        },
+        {
+          "q": "文中如何解决新用户推荐时因缺乏历史数据而无法使用GBDT的问题？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "构建实时推荐引擎时使用了什么数据集？",
+          "r_vec": 14,
+          "r_rer": 2
+        },
+        {
+          "q": "UCB算法中悲观保守的做法是如何选择臂的？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LinUCB算法的Disjoint和Hybrid版本在参数共享方面有什么区别？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "传统推荐系统在哪些具体情境下效果会变差，甚至加剧用户的选择困难？",
+          "r_vec": 13,
+          "r_rer": 2
+        }
+      ]
+    },
+    {
+      "id": "09",
+      "records": [
+        {
+          "q": "2023年AAAI会议上Sun等人关于对比学习减少对话幻觉的研究论文DOI是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为了帮助LLM模型理解提示的结构，应该使用什么符号来分隔不同的块？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在LLM幻觉评估中，多模态数据集如何扩展评估范畴？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "当预测域的置信度分数低于80%时，系统会如何调整其检索范围？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "法律专业人士如何利用幻觉检测工具来避免伪造的案件引用？",
+          "r_vec": 10,
+          "r_rer": 2
+        },
+        {
+          "q": "哪篇论文介绍了通过实时验证和纠正来减轻大型语言模型幻觉的“Ever”方法？",
+          "r_vec": 32,
+          "r_rer": 2
+        },
+        {
+          "q": "在幻觉示例中，检索内容推荐的最佳图像质量获取时间窗口具体是多少，模型生成时如何处理这一信息导致事实偏离？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "SelfCheckGPT在GPT-3生成的WikiBio段落实验中，哪种指标被证明表现最佳？",
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "减轻文本幻觉需要采用什么训练机制？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "关于Ji, Z.等人合著的“Survey of Hallucination in Natural Language Generation”论文，其发表在ACM Computing Surveys的卷号和页码范围是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "records": [
+        {
+          "q": "从2000年到2022年3月，全球固态电池专利数量排名第一的公司是哪家？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "赣锋锂电的第二代固态电池能量密度是多少？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "Robert Mitchell 的研究领域是什么？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "固态电池技术迭代的第一阶段具体涉及哪些材料或技术组合？",
+          "r_vec": 38,
+          "r_rer": 3
+        },
+        {
+          "q": "电动汽车电池在哪些方面存在主要局限性？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "哪家公司已成功应用等静压技术于固态电池组装？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2024年全球消费锂电池出货量在总锂离子电池出货量中占多大比例？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "固体电池中固态电解质与电极接触不良如何影响锂离子传输？",
+          "r_vec": 47,
+          "r_rer": 1
+        },
+        {
+          "q": "温等静压技术如何通过施加均匀压力来减少固态电池的电阻率？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为了最小化阴极颗粒的体积变化，文中建议混合哪两种阴极材料？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "records": [
+        {
+          "q": "如果我想报告Akamai系统中的漏洞，应该访问网站的哪个部分？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Z轴扩展中，路由器是怎样通过请求的userId来选择具体的应用程序实例的？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "微服务架构中的软件组件如何根据当前容量和预测需求独立扩展计算资源？",
+          "r_vec": 18,
+          "r_rer": 1
+        },
+        {
+          "q": "当单体应用的通信功能遇到流量激增时，为什么必须增加计算资源会导致资源浪费？",
+          "r_vec": 8,
+          "r_rer": 2
+        },
+        {
+          "q": "微服务架构的持续部署特性如何改变发布更新的频率？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Amazon Prime Video 为什么将其音频和视频质量监控应用从微服务架构改为单体应用？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CI/CD管道中，如果出现问题，系统可以采取什么行动？",
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "团队规模超过多少名开发人员时，建议采用微服务架构？",
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么Kubernetes对于许多刚开始的团队来说不太适用？",
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Camunda的代理设计中，针对工具部分有哪些具体的设计原则？",
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "records": [
+        {
+          "q": "模仿学习和强化学习中，从少量演示或试验中学习的具体研究挑战是什么？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "学习方式有哪两种选择？",
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "根据研究，AGI预计在何时达到奇点，届时AI将对社会产生什么影响？",
+          "r_vec": 10,
+          "r_rer": 1
+        },
+        {
+          "q": "根据文本片段，批判者通常如何通过人类智力特征来论证当前最先进的AI系统无法实现强AI？",
+          "r_vec": 5,
+          "r_rer": 1
+        },
+        {
+          "q": "第36届NeurIPS会议上，Fan等人发表的论文标题是什么？",
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "在灾难救援中，具身无人机如何通过语言模型来理解并遵循人类语音指令，例如“在倒塌的桥梁附近搜索”？",
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "GPT-4通过自我反思技术在高难度测试中的表现提升了多少百分比？",
+          "r_vec": 3,
+          "r_rer": 2
+        },
+        {
+          "q": "如何确认你正在安全地连接到美国政府网站？",
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "谁撰写了2013年发表在Science上的文章，该文探讨了脑结构与功能网络与认知之间的关系？",
+          "r_vec": 3,
+          "r_rer": 3
+        },
+        {
+          "q": "学习数据分析时，有哪些授课形式可以选择？",
+          "r_vec": 1,
+          "r_rer": 2
+        }
+      ]
+    }
+  ],
+  "keyword": [
+    {
+      "id": "01",
+      "records": [
+        {
+          "q": "在内存受限的设备上进行模型推理时，W4A16非对称量化技术的主要应用场景是什么？",
+          "keywords": [
+            "W4A16 asymmetric quantization model inference memory constrained",
+            "quantization-aware training mixed precision deployment edge devices",
+            "INT4 weight INT16 activation quantization hardware acceleration",
+            "model compression inference latency power consumption optimization"
+          ],
+          "r_vec": 11,
+          "r_rer": 1
+        },
+        {
+          "q": "文本片段中的Base64字符串是否包含换行字符？",
+          "keywords": [
+            "Base64 encoding newline characters whitespace",
+            "Base64 string validation line break detection",
+            "Base64 decoding multiline handling CRLF LF",
+            "Base64 padding line length RFC 4648"
+          ],
+          "r_vec": 83,
+          "r_rer": null
+        },
+        {
+          "q": "ToMe方法在多头注意力输出中合并了哪些具体内容？",
+          "keywords": [
+            "Token Merging ToMe multi-head attention",
+            "attention output token similarity clustering",
+            "ToMe layer patch merging strategy",
+            "ViT acceleration token reduction method"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "Marlin-AWQ在HumanEval基准测试中实现了多少Pass@1分数和吞吐量？",
+          "keywords": [
+            "Marlin-AWQ quantization algorithm kernel optimization",
+            "HumanEval benchmark Pass@1 score evaluation",
+            "large language model inference throughput latency measurement",
+            "GPU accelerated quantized model performance metrics"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "Xilinx Alveo U280、VCK5000和VHK158这三种FPGA在解码阶段分别能达到多少tokens/s？",
+          "keywords": [
+            "FPGA Xilinx Alveo U280 VCK5000 VHK158 decode throughput",
+            "transformer inference FPGA tokens per second decoding speed",
+            "FPGA accelerator LLM decode phase performance benchmark",
+            "Vitis AI high level synthesis FPGA inference latency throughput"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LLM in a Flash通过什么机制来改善模型推理的效率？",
+          "keywords": [
+            "LLM inference efficiency flash memory SSD",
+            "sparse attention dynamic batching activation caching",
+            "quantization KV cache compression offloading",
+            "memory bandwidth optimization inference latency throughput"
+          ],
+          "r_vec": 10,
+          "r_rer": 2
+        },
+        {
+          "q": "在标准Transformer模型中，由于注意力计算的存在，稀疏化方法具体包括哪些类型？",
+          "keywords": [
+            "sparse attention mechanism transformer linear complexity",
+            "token pruning token merging attention sparsification",
+            "longformer bigbird sparse transformer architecture",
+            "attention pattern sparsity efficiency optimization"
+          ],
+          "r_vec": 18,
+          "r_rer": 2
+        },
+        {
+          "q": "在资源受限的边缘环境中，部署大型语言模型时遇到了哪些主要障碍？",
+          "keywords": [
+            "edge deployment large language model constraints",
+            "LLM resource-constrained inference optimization",
+            "edge computing LLM latency memory bandwidth",
+            "model compression pruning quantization edge devices"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "BK-SDM的训练成本是原始Stable Diffusion的多少分之一？",
+          "keywords": [
+            "BK-SDM training cost reduction Stable Diffusion",
+            "knowledge distillation student model efficiency",
+            "computational cost FLOPs training memory reduction",
+            "model compression inference speed comparison"
+          ],
+          "r_vec": 107,
+          "r_rer": 1
+        },
+        {
+          "q": "Swapnesh Patel在3周前发布的文章标题是什么？",
+          "keywords": [
+            "Swapnesh Patel recent publication article title",
+            "technical document retrieval author query",
+            "Patel research paper 3 weeks ago",
+            "scholarly article search author name date"
+          ],
+          "r_vec": 22,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "records": [
+        {
+          "q": "Python通过什么方式让分析师能够高效地处理大型数据集？",
+          "keywords": [
+            "Python large-scale data processing efficient",
+            "Pandas Dask Vaex DataFrame optimization",
+            "data chunking parallel processing memory management",
+            "vectorization NumPy performance scalability"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Python 和 Java 在语法、类型、性能、OOP 特性和使用案例这五个方面有哪些具体差异？",
+          "keywords": [
+            "Python Java syntax comparison type system",
+            "performance benchmark static vs dynamic typing",
+            "object-oriented programming paradigm differences",
+            "use case scenarios language selection criteria"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust代码示例中，尝试修改已释放内存的引用为何会引发编译错误？",
+          "keywords": [
+            "Rust dangling pointer use-after-free compile-time safety",
+            "borrow checker lifetime annotation mutable reference",
+            "memory safety ownership borrowing rules Rust",
+            "unsafe block raw pointer dereferencing heap memory"
+          ],
+          "r_vec": 8,
+          "r_rer": 2
+        },
+        {
+          "q": "JetBrains为Rust学习者提供了哪些免费学习资源？",
+          "keywords": [
+            "JetBrains Rust education resources free",
+            "IntelliJ IDEA Rust plugin tutorial learning",
+            "RustRover IDE beginner guide documentation",
+            "JetBrains Academy Rust course project"
+          ],
+          "r_vec": 2,
+          "r_rer": 3
+        },
+        {
+          "q": "根据文本，什么因素解释了Rust开发者一旦尝试就坚持使用它？",
+          "keywords": [
+            "Rust developer retention adoption factors",
+            "Rust programming language advantages performance safety",
+            "Rust developer experience satisfaction survey",
+            "Rust community ownership ecosystem tooling Cargo"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "这篇文章涉及哪个编程语言？",
+          "keywords": [
+            "programming language detection source code analysis",
+            "programming language identification lexical syntax",
+            "code repository language classification GitHub linguist",
+            "programming language profiling AST abstract syntax tree"
+          ],
+          "r_vec": 100,
+          "r_rer": null
+        },
+        {
+          "q": "在这个Rust并发示例中，最终计数器值是如何确保为100000的？",
+          "keywords": [
+            "Rust concurrency counter correctness atomic operations",
+            "thread synchronization mutex arc shared state",
+            "concurrent increment race condition prevention",
+            "Rust ownership borrow checker thread safety"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "在Rust中，如何使用模式匹配来根据玩家的方向执行相应的移动操作？",
+          "keywords": [
+            "Rust pattern matching direction player movement",
+            "Rust enum direction match movement logic",
+            "Rust match expression direction case execution",
+            "Rust game programming direction based movement"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "哪些大型公司在部分项目中采用了Rust编程语言？",
+          "keywords": [
+            "Rust adoption enterprise projects case studies",
+            "Rust programming language production deployment",
+            "Rust industrial applications company experience",
+            "Rust migration success stories large scale systems"
+          ],
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "Rust通过哪些具体机制来提升性能并避免不必要的系统减速？",
+          "keywords": [
+            "Rust performance zero-cost abstractions move semantics ownership borrowing",
+            "Rust concurrency data race prevention thread safety fearless concurrency",
+            "Rust memory safety stack heap allocation RAII drop",
+            "Rust compile-time optimizations monomorphization LLVM backend code generation"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "records": [
+        {
+          "q": "十年前生成式AI被认为不可能的主要原因有哪些？",
+          "keywords": [
+            "generative AI limitations early obstacles computational resources",
+            "probabilistic models statistical learning limitations challenges",
+            "deep learning inception training data availability",
+            "generative AI historical barriers pre-training compute"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "传统查找算法中，平均比较次数是多少？",
+          "keywords": [
+            "binary search average comparisons algorithm analysis",
+            "search algorithm comparison count complexity",
+            "average case analysis lookup algorithms",
+            "search algorithm performance metrics comparison"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算机使用Shor算法分解一个1000位的大数需要多长时间？",
+          "keywords": [
+            "quantum computing Shor algorithm large integer factorization",
+            "Shor algorithm complexity time complexity analysis",
+            "quantum processor qubits gate operations factorization time",
+            "quantum algorithm performance scaling large number factorization"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "在量子计算中，为什么单次执行算法通常无法得到可靠结果？",
+          "keywords": [
+            "quantum algorithm single-shot measurement fidelity",
+            "quantum decoherence noise error rate",
+            "quantum state collapse probability amplitude",
+            "quantum error mitigation zero noise extrapolation"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "量子计算目前的错误率通常高于多少百分比？",
+          "keywords": [
+            "quantum computing error rate threshold percentage",
+            "quantum gate fidelity error probability",
+            "qubit decoherence error rate benchmark",
+            "quantum error correction overhead threshold"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "经典计算中数据是如何表示和处理的？",
+          "keywords": [
+            "classical computing data representation bits registers",
+            "digital logic gates Boolean algebra circuits",
+            "CPU instruction set architecture registers ALU",
+            "memory hierarchy cache RAM data storage"
+          ],
+          "r_vec": 17,
+          "r_rer": 3
+        },
+        {
+          "q": "这家公司的电子邮件联系地址是什么？",
+          "keywords": [
+            "company email contact address official",
+            "corporate contact information email support",
+            "business email directory contact details"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在量子计算领域，企业为获得量子优势在人才方面主要面临什么挑战？",
+          "keywords": [
+            "quantum talent shortage workforce development challenges",
+            "quantum computing skills gap recruitment retention",
+            "quantum workforce pipeline education training programs",
+            "quantum computing industry talent acquisition competition"
+          ],
+          "r_vec": 5,
+          "r_rer": 2
+        },
+        {
+          "q": "量子计算的关键技术概念有哪些？",
+          "keywords": [
+            "quantum computing key concepts qubit superposition entanglement",
+            "quantum gates quantum circuits quantum algorithms Shor Grover",
+            "quantum error correction decoherence fault tolerance",
+            "quantum supremacy quantum advantage NISQ variational algorithms"
+          ],
+          "r_vec": 50,
+          "r_rer": null
+        },
+        {
+          "q": "BlueQubit量子计算软件集成了哪些具体的开源库？",
+          "keywords": [
+            "BlueQubit quantum computing software library integration",
+            "quantum software SDK open source dependencies",
+            "quantum framework Qiskit Cirq PennyLane integration",
+            "quantum programming environment open source tools"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "records": [
+        {
+          "q": "在RAG系统中，微调嵌入技术虽然增加了复杂性，但能显著提升哪方面的性能？",
+          "keywords": [
+            "RAG fine-tuning embedding retrieval performance",
+            "dense retrieval model domain adaptation",
+            "embedding tuning semantic search quality",
+            "RAG system retrieval accuracy improvement"
+          ],
+          "r_vec": 19,
+          "r_rer": null
+        },
+        {
+          "q": "在应用语义元数据过滤的实现中，需要先查询哪个类的schema信息来验证向量存储结构是否正确配置？",
+          "keywords": [
+            "semantic metadata filtering vector store schema validation",
+            "vector database schema configuration metadata query",
+            "semantic filtering vector store class schema verification",
+            "metadata filtering implementation vector store structure"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "OpenAI 助手中的函数调用 API 主要功能是什么？",
+          "keywords": [
+            "OpenAI function calling API capabilities",
+            "tool use API parameters JSON schema",
+            "parallel function execution structured outputs",
+            "API reference endpoint request response format"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "lidc cookie的持续时间是多少天？",
+          "keywords": [
+            "LIDC cookie expiration duration days",
+            "browser cookie lifetime session persistence",
+            "HTTP cookie max-age expiry settings",
+            "cookie management duration configuration"
+          ],
+          "r_vec": 8,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么即使上下文提供了完整信息，大语言模型生成的回答有时仍会省略关键细节？",
+          "keywords": [
+            "LLM context utilization information omission",
+            "long-context evaluation factual recall accuracy",
+            "retrieval-augmented generation faithfulness hallucination",
+            "attention mechanism context window information loss"
+          ],
+          "r_vec": 109,
+          "r_rer": 1
+        },
+        {
+          "q": "对于生产级RAG系统，Qdrant推荐用于哪种数据规模？",
+          "keywords": [
+            "Qdrant production RAG system scalability",
+            "vector database benchmark performance metrics",
+            "Qdrant data规模 deployment best practices",
+            "RAG system architecture vector store sizing"
+          ],
+          "r_vec": 2,
+          "r_rer": null
+        },
+        {
+          "q": "在客服问答系统中，RAG需要重点关注哪些性能特性？",
+          "keywords": [
+            "RAG customer service performance latency throughput",
+            "retrieval augmented generation QA system scalability",
+            "real-time retrieval response time conversational AI",
+            "RAG evaluation metrics accuracy relevance freshness"
+          ],
+          "r_vec": 41,
+          "r_rer": 6
+        },
+        {
+          "q": "在RAG管道的数据提取阶段，OCR扫描可能因为什么原因而失败？",
+          "keywords": [
+            "OCR failure causes data extraction pipeline",
+            "OCR error sources document preprocessing",
+            "text extraction challenges scanned documents",
+            "OCR accuracy degradation factors noise artifacts"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "测试嵌入模型时，采用真实用户查询的代表性样本能避免什么后期问题？",
+          "keywords": [
+            "embedding model evaluation sample representativeness",
+            "user query distribution shift evaluation bias",
+            "test set construction sampling methodology real-world",
+            "out-of-distribution generalization downstream performance"
+          ],
+          "r_vec": 69,
+          "r_rer": 2
+        },
+        {
+          "q": "RAG融合通过什么方式提升RAG应用的语义搜索效率？",
+          "keywords": [
+            "RAG fusion retrieval augmentation strategies",
+            "semantic search efficiency optimization techniques",
+            "multi-query retrieval hybrid search methods",
+            "query rewriting ranking fusion algorithms"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "records": [
+        {
+          "q": "英伟达最新旗舰GPU H200相比前代H100的性能提升幅度是多少？",
+          "keywords": [
+            "NVIDIA H200 H100 GPU performance benchmark",
+            "H200 H100 specifications bandwidth FP8 throughput",
+            "data center GPU HBM3e memory upgrade H200",
+            "next generation GPU architecture Hopper H200 improvement"
+          ],
+          "r_vec": 59,
+          "r_rer": null
+        },
+        {
+          "q": "解决方案提供商领导者为什么认为像Gaudi 3这样的成本效益高的AI系统可能有市场？",
+          "keywords": [
+            "AI solution providers market analysis cost-effectiveness",
+            "Gaudi 3 AI accelerator competitive pricing TCO",
+            "enterprise AI deployment ROI total cost of ownership",
+            "AI hardware market trends cost-performance ratio"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "Intel在Deutsche Bank分析师会议上提到的云迁移观点与Nvidia的生态系统策略有何关联？",
+          "keywords": [
+            "cloud migration strategy enterprise workload deployment",
+            "Nvidia GPU ecosystem software stack CUDA",
+            "data center infrastructure scaling cloud partnership",
+            "analyst conference technology roadmap competitive landscape"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "2026年，固定宽带平均月费最高的国家是哪个？",
+          "keywords": [
+            "fixed broadband average monthly price cost 2026",
+            "country comparison broadband affordability global ranking",
+            "household broadband subscription fee expenditure OECD ITU",
+            "broadband pricing statistics highest cost country 2026"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "ClusterMax评估工具针对哪些GPU型号的Neocloud集群进行排名？",
+          "keywords": [
+            "ClusterMax evaluation tool GPU ranking",
+            "Neocloud cluster GPU models performance benchmark",
+            "GPU cluster ranking methodology benchmark metrics",
+            "NVIDIA A100 H100 Neocloud performance comparison"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "海光信息上半年市场推广费用的同比增长率是多少？",
+          "keywords": [
+            "Hygon Information semiannual marketing expense growth rate",
+            "H1 financial report operating expense selling expense",
+            "revenue growth YoY percentage market promotion cost",
+            "semiconductor company financial disclosure quarterly report"
+          ],
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "AMD的哪些具体加速器型号被特别指出对NVIDIA的市场主导地位构成挑战？",
+          "keywords": [
+            "AMD accelerator GPU model MI250 MI300",
+            "NVIDIA market dominance competition",
+            "AI hardware accelerator competitive landscape",
+            "AMD Instinct accelerator data center GPU"
+          ],
+          "r_vec": 8,
+          "r_rer": 1
+        },
+        {
+          "q": "Nvidia和AMD被要求在何时前提交最终评论和性能改进反馈？",
+          "keywords": [
+            "Nvidia AMD regulatory compliance deadline feedback",
+            "GPU performance improvement report submission timeline",
+            "semiconductor industry regulatory review final comments",
+            "chip manufacturer compliance response period"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "英伟达的市值在五月达到了多少万亿美元？",
+          "keywords": [
+            "NVIDIA market capitalization trillion",
+            "NVIDIA stock market value May",
+            "NVIDIA share price market cap",
+            "NVIDIA financial valuation peak"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "根据技术基准，中国AI模型与美国模型相比在能力上是否存在显著差距？",
+          "keywords": [
+            "AI model benchmark comparison China United States capabilities",
+            "large language model evaluation metrics performance gap",
+            "technical benchmark MMLU HumanEval cross-national comparison",
+            "AI capability assessment state-of-the-art frontier models"
+          ],
+          "r_vec": 18,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "records": [
+        {
+          "q": "J, Creemers R (2023) 在关于中国网络空间管理机构的研究中主要描述了哪些方面？",
+          "keywords": [
+            "cybersecurity governance China institutions",
+            "network space administration regulatory bodies",
+            "Chinese cyber policy enforcement agencies",
+            "J Creemers 2023 research framework analysis"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "Hao Huang是哈佛法学院法学硕士项目的哪一届学生？",
+          "keywords": [
+            "Hao Huang Harvard Law School LLM student",
+            "Hao Huang LL.M. graduation year cohort",
+            "Hao Huang Harvard Law master of laws program",
+            "Hao Huang HLS LL.M. class year"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "2023年10月21日生效的“英美数据桥”如何简化美英之间的数据跨境传输？",
+          "keywords": [
+            "UK-US Data Bridge adequacy decision data transfer",
+            "EU GDPR adequacy framework commercial data",
+            "cross-border data transfer mechanisms standard contractual clauses",
+            "Privacy Shield successor UK extension data flows"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "对于危害程度高但发生概率低的数据，在重要数据识别中应如何判定？",
+          "keywords": [
+            "critical data identification high-impact low-probability risk assessment",
+            "data risk evaluation severity likelihood criteria methodology",
+            "important data classification hazard probability threshold",
+            "risk-based data valuation high-consequence rare-event scoring"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "认证机构在做出个人信息保护认证决定时，依据哪些材料和报告？",
+          "keywords": [
+            "personal information protection certification decision materials",
+            "certification body assessment documentation reports",
+            "data protection certification audit evaluation",
+            "PIPL compliance certification documents evidence"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "如果Comp.CN的数据传输行为导致数据主体受损，它与Comp.EU应如何共同承担法律责任？",
+          "keywords": [
+            "data transfer liability cross-border GDPR",
+            "joint controller liability data subject damages",
+            "Comp.CN Comp.EU data protection law",
+            "GDPR liability framework international cooperation"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "网站指南的分类有哪些？",
+          "keywords": [
+            "website taxonomy classification schemes",
+            "web directory categories structure",
+            "information architecture site classification",
+            "web portal genre classification ontology"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "PIPL和GDPR在认定未成年人的个人信息是否属于敏感数据方面有何不同？",
+          "keywords": [
+            "PIPL GDPR sensitive personal information minors children",
+            "children data protection law definition age threshold",
+            "minor consent guardian permission sensitive data processing",
+            "cross-border data transfer children PIPL GDPR compliance"
+          ],
+          "r_vec": 11,
+          "r_rer": null
+        },
+        {
+          "q": "数据保护机构在采纳标准数据保护条款时，需要依据哪些具体条款？",
+          "keywords": [
+            "data protection authority standard contractual clauses adoption criteria",
+            "SCC GDPR compliance assessment requirements",
+            "contractual safeguards personal data transfer adequacy",
+            "regulatory approval standard data protection clauses"
+          ],
+          "r_vec": 83,
+          "r_rer": null
+        },
+        {
+          "q": "在什么条件下学术研究机构使用个人资料进行统计分析并发表研究成果可被认定为适法的特定目的外利用？",
+          "keywords": [
+            "academic research data use privacy law consent purpose limitation",
+            "statistical analysis personally identifiable information legal basis GDPR",
+            "research exemption data processing scholarly publication compliance",
+            "legitimate interest academic freedom data protection impact assessment"
+          ],
+          "r_vec": 56,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "records": [
+        {
+          "q": "2023年马萨诸塞州环境保护局拍卖了多少吨2023年度的碳配额？",
+          "keywords": [
+            "Massachusetts 2023 carbon allowance auction results",
+            "MassDEP 2023 auction tons sold CO2",
+            "Massachusetts环境保护局 碳配额拍卖",
+            "2023 carbon allowance auction environmental compliance"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "韩国碳市场第三阶段对抵销信用的定量限制是每个纳管主体履约义务的多少百分比？",
+          "keywords": [
+            "Korea ETS Phase III offset credit limit percentage compliance obligation",
+            "Korean carbon market quantitative restriction offset allowance ratio",
+            "Korea allowance trading system offset credit cap proportion",
+            "South Korea ETS Phase 3 offset limit percentage entity obligation"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "EU ETS 2 从何时起将开始覆盖交通和建筑部门？",
+          "keywords": [
+            "EU ETS 2 transport buildings sectors implementation date",
+            "European Union Emissions Trading System Phase 2 policy timeline",
+            "ETS 2 transport buildings coverage start date directive",
+            "EU climate policy ETS 2 implementation timeline transport buildings"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "欧盟进口商在CBAM下必须于每年何时完成年度数据申报？",
+          "keywords": [
+            "CBAM annual report submission deadline European Union",
+            "Carbon Border Adjustment Mechanism reporting timeline",
+            "CBAM importer compliance verification schedule",
+            "EU CBAM annual data declaration due date"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "碳关税征收100欧元/吨时，2030年中国出口欧盟的钢铝产品碳减排量预计是多少？",
+          "keywords": [
+            "carbon border adjustment mechanism CBAM steel aluminum tariff impact",
+            "EU carbon border tax 100 euros per ton China export reduction",
+            "carbon leakage avoidance 2030 projections trade emission reduction",
+            "CBAM implementation compliance cost decarbonization pathway heavy industry"
+          ],
+          "r_vec": 6,
+          "r_rer": 1
+        },
+        {
+          "q": "DNV 在帮助企业应对碳定价政策时主要提供哪些专业支持？",
+          "keywords": [
+            "DNV carbon pricing advisory services",
+            "corporate climate policy compliance strategy",
+            "emissions trading scheme ETS implementation support",
+            "carbon footprint verification carbon neutrality pathway"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "代码721260在贸易分类中代表哪种产品？",
+          "keywords": [
+            "HS code 721260 trade classification",
+            "Harmonized System 721260 product category",
+            "customs tariff code 721260 steel product",
+            "trade commodity classification 721260 specifications"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CBAM提案中，排放证书的价格是根据什么标准来确定的？",
+          "keywords": [
+            "CBAM carbon border adjustment mechanism certificate price determination",
+            "EU ETS carbon price benchmark reference value",
+            "CBAM implementation regulation trading scheme",
+            "carbon allowance auction price reference standard"
+          ],
+          "r_vec": 9,
+          "r_rer": 2
+        },
+        {
+          "q": "Wang HailJun在2018年发表的关于中国碳排放交易市场MRV系统挑战的文章，其DOI编号是什么？",
+          "keywords": [
+            "China carbon emission trading MRV system challenges",
+            "Wang Haijun carbon trading 2018 publication",
+            "China ETS MRV verification reporting",
+            "carbon market monitoring reporting verification DOI"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "苏庆义在《世界知识》2023年第5期上发表的文章标题是什么？",
+          "keywords": [
+            "Su Qingyi publication 2023 World Knowledge journal article title",
+            "World Knowledge magazine 2023 issue 5 Su Qingyi author",
+            "2023 academic journal article title Su Qingyi China",
+            "journal article retrieval Su Qingyi World Knowledge periodical"
+          ],
+          "r_vec": 5,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "records": [
+        {
+          "q": "文本中提到Agentic AI的质量离不开什么类型的数据？",
+          "keywords": [
+            "Agentic AI data quality requirements",
+            "AI agent training data characteristics",
+            "high-quality dataset AI agents",
+            "data curation autonomous agents"
+          ],
+          "r_vec": 2,
+          "r_rer": 2
+        },
+        {
+          "q": "根据描述，仅用于匿名统计目的的信息在哪些条件下可能被用来识别个人？",
+          "keywords": [
+            "anonymous data re-identification privacy risk",
+            "data anonymization conditions quasi-identifier",
+            "GDPR data protection anonymization criteria",
+            "statistical disclosure control uniqueness threshold"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "COFIBA算法在哪些关键方面与LinUCB算法有所区别？",
+          "keywords": [
+            "COFIBA algorithm contextual bandits",
+            "LinUCB algorithm difference comparison",
+            "bandit algorithm exploration exploitation",
+            "contextual bandit variants UCB"
+          ],
+          "r_vec": 3,
+          "r_rer": 3
+        },
+        {
+          "q": "在特征组数据摄取后，哪些特征组的计数被添加到了ps字典中？",
+          "keywords": [
+            "feature group ingestion ps dictionary",
+            "data ingestion feature count dictionary update",
+            "feature store ps dictionary population",
+            "feature group count metric ingestion pipeline"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "bandit算法中累积遗憾的数学表达式是什么？",
+          "keywords": [
+            "bandit algorithm cumulative regret mathematical formulation",
+            "regret bound analysis upper confidence bound UCB",
+            "stochastic bandit regret minimization logarithmic bound",
+            "multi-armed bandit regret analysis KL divergence lower bound"
+          ],
+          "r_vec": 2,
+          "r_rer": 5
+        },
+        {
+          "q": "文中如何解决新用户推荐时因缺乏历史数据而无法使用GBDT的问题？",
+          "keywords": [
+            "cold start recommendation new user GBDT gradient boosting",
+            "feature engineering sparse data collaborative filtering",
+            "implicit feedback user profile embedding",
+            "hybrid recommendation system hybrid model"
+          ],
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "构建实时推荐引擎时使用了什么数据集？",
+          "keywords": [
+            "real-time recommendation engine dataset",
+            "online learning implicit feedback",
+            "streaming data collaborative filtering",
+            "user interaction click-through rate dataset"
+          ],
+          "r_vec": 15,
+          "r_rer": 2
+        },
+        {
+          "q": "UCB算法中悲观保守的做法是如何选择臂的？",
+          "keywords": [
+            "UCB algorithm arm selection pessimistic uncertainty",
+            "Upper Confidence Bound optimistic exploration exploitation",
+            "multi-armed bandit UCB1 UCB2 action selection",
+            "regret minimization confidence interval exploration"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "LinUCB算法的Disjoint和Hybrid版本在参数共享方面有什么区别？",
+          "keywords": [
+            "LinUCB algorithm disjoint hybrid architecture",
+            "contextual bandit parameter sharing exploration exploitation",
+            "upper confidence bound linear models collaborative filtering",
+            "multi-armed bandit hybrid version feature sharing"
+          ],
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "传统推荐系统在哪些具体情境下效果会变差，甚至加剧用户的选择困难？",
+          "keywords": [
+            "collaborative filtering cold start problem data sparsity",
+            "filter bubble echo chamber user choice overload",
+            "serendipity novelty diversity recommendation evaluation",
+            "long tail items popularity bias exposure unfairness"
+          ],
+          "r_vec": 38,
+          "r_rer": 2
+        }
+      ]
+    },
+    {
+      "id": "09",
+      "records": [
+        {
+          "q": "2023年AAAI会议上Sun等人关于对比学习减少对话幻觉的研究论文DOI是什么？",
+          "keywords": [
+            "AAAI 2023 contrastive learning dialogue hallucination",
+            "Sun et al. conversational hallucination reduction",
+            "DOI retrieval academic paper search",
+            "dialogue systems hallucination mitigation ACL"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "为了帮助LLM模型理解提示的结构，应该使用什么符号来分隔不同的块？",
+          "keywords": [
+            "LLM prompt structure delimiter syntax",
+            "prompt engineering section separator token",
+            "structured prompt template markdown YAML",
+            "prompt formatting best practices LLM input"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在LLM幻觉评估中，多模态数据集如何扩展评估范畴？",
+          "keywords": [
+            "multimodal hallucination evaluation LLM",
+            "multimodal dataset benchmark visual textual",
+            "hallucination detection metrics fidelity consistency",
+            "cross-modal hallucination VQA image captioning"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "当预测域的置信度分数低于80%时，系统会如何调整其检索范围？",
+          "keywords": [
+            "prediction confidence threshold low confidence retrieval range adjustment",
+            "retrieval scope adaptation dynamic query expansion",
+            "confidence score thresholding retrieval strategy adaptation",
+            "uncertainty-aware retrieval query broadening low-confidence prediction"
+          ],
+          "r_vec": 14,
+          "r_rer": 1
+        },
+        {
+          "q": "法律专业人士如何利用幻觉检测工具来避免伪造的案件引用？",
+          "keywords": [
+            "hallucination detection tools legal AI",
+            "fabricated case citation verification",
+            "legal NLP source validation grounding",
+            "AI ethics legal compliance hallucination mitigation"
+          ],
+          "r_vec": 64,
+          "r_rer": 2
+        },
+        {
+          "q": "哪篇论文介绍了通过实时验证和纠正来减轻大型语言模型幻觉的“Ever”方法？",
+          "keywords": [
+            "hallucination mitigation LLM verification correction",
+            "real-time verification language model hallucination",
+            "Ever method LLM hallucination reduction",
+            "factual accuracy large language model correction"
+          ],
+          "r_vec": 108,
+          "r_rer": 2
+        },
+        {
+          "q": "在幻觉示例中，检索内容推荐的最佳图像质量获取时间窗口具体是多少，模型生成时如何处理这一信息导致事实偏离？",
+          "keywords": [
+            "hallucination example best image quality acquisition time window",
+            "retrieval content recommendation temporal window optimization",
+            "model generation factual deviation retrieval information processing",
+            "visual hallucination context window artifact temporal degradation"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "SelfCheckGPT在GPT-3生成的WikiBio段落实验中，哪种指标被证明表现最佳？",
+          "keywords": [
+            "SelfCheckGPT hallucination detection GPT-3",
+            "WikiBio factual consistency evaluation",
+            "NLI-based hallucination metric BERTScore",
+            "P(True) SelfCheckGPT benchmark"
+          ],
+          "r_vec": 25,
+          "r_rer": 2
+        },
+        {
+          "q": "减轻文本幻觉需要采用什么训练机制？",
+          "keywords": [
+            "hallucination mitigation training mechanisms large language models",
+            "factual grounding knowledge alignment supervised fine-tuning",
+            "RLHF DPO KTO preference optimization LLM",
+            "self-consistency chain-of-thought verification prompting"
+          ],
+          "r_vec": 25,
+          "r_rer": 1
+        },
+        {
+          "q": "关于Ji, Z.等人合著的“Survey of Hallucination in Natural Language Generation”论文，其发表在ACM Computing Surveys的卷号和页码范围是什么？",
+          "keywords": [
+            "Ji Ziwei hallucination natural language generation survey",
+            "ACM Computing Surveys volume page range",
+            "hallucination NLG taxonomy detection mitigation",
+            "survey paper bibliographic information citation"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "records": [
+        {
+          "q": "从2000年到2022年3月，全球固态电池专利数量排名第一的公司是哪家？",
+          "keywords": [
+            "solid state battery patent ranking global company",
+            "solid-state battery patent filing statistics 2000 2022",
+            "patent portfolio leader solid-state electrolyte battery technology",
+            "worldwide patent analysis solid-state battery manufacturer"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "赣锋锂电的第二代固态电池能量密度是多少？",
+          "keywords": [
+            "Ganfeng Lithium solid-state battery second generation",
+            "solid-state battery energy density Wh/kg",
+            "lithium metal anode solid electrolyte energy density",
+            "next-generation solid-state battery performance specification"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "Robert Mitchell 的研究领域是什么？",
+          "keywords": [
+            "Robert Mitchell researcher publications CV",
+            "Robert Mitchell academic profile university affiliation",
+            "Robert Mitchell research interests expertise",
+            "Robert Mitchell Google Scholar ORCID Scopus"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "固态电池技术迭代的第一阶段具体涉及哪些材料或技术组合？",
+          "keywords": [
+            "solid-state battery first generation sulfide electrolyte LiCoO2",
+            "solid electrolyte interface SEI dendrite suppression lithium metal",
+            "material combination oxide electrolyte polymer electrolyte composite",
+            "battery technology iteration energy density cycle life ionic conductivity"
+          ],
+          "r_vec": 47,
+          "r_rer": 3
+        },
+        {
+          "q": "电动汽车电池在哪些方面存在主要局限性？",
+          "keywords": [
+            "electric vehicle battery limitations energy density range",
+            "lithium-ion battery degradation cycle life calendar aging",
+            "battery thermal management safety fire risk thermal runaway",
+            "charging time infrastructure availability cost reduction"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "哪家公司已成功应用等静压技术于固态电池组装？",
+          "keywords": [
+            "solid-state battery assembly isostatic pressing technology",
+            "isostatic pressing cold sintering solid-state electrolyte",
+            "isostatic pressing battery manufacturing company",
+            "solid-state battery fabrication isostatic pressing application"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "2024年全球消费锂电池出货量在总锂离子电池出货量中占多大比例？",
+          "keywords": [
+            "2024 global consumer lithium-ion battery shipments market share",
+            "lithium-ion battery shipment statistics consumer electronics",
+            "battery market share analysis global shipment data 2024",
+            "consumer vs industrial lithium battery shipment volume proportion"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "固体电池中固态电解质与电极接触不良如何影响锂离子传输？",
+          "keywords": [
+            "solid-state electrolyte electrode interface contact resistance",
+            "lithium-ion transport impedance ionic conductivity",
+            "interface delamination void formation crack propagation",
+            "electrochemical performance capacity fade cycling stability"
+          ],
+          "r_vec": 47,
+          "r_rer": 1
+        },
+        {
+          "q": "温等静压技术如何通过施加均匀压力来减少固态电池的电阻率？",
+          "keywords": [],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "为了最小化阴极颗粒的体积变化，文中建议混合哪两种阴极材料？",
+          "keywords": [
+            "cathode particle volume change minimization",
+            "cathode material blending mixing strategy",
+            "composite cathode structural stability",
+            "lithium ion battery electrode engineering"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "records": [
+        {
+          "q": "如果我想报告Akamai系统中的漏洞，应该访问网站的哪个部分？",
+          "keywords": [
+            "Akamai vulnerability disclosure reporting process",
+            "Akamai security incident reporting website portal",
+            "Akamai bug bounty program responsible disclosure",
+            "Akamai security contact report vulnerability"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "在Z轴扩展中，路由器是怎样通过请求的userId来选择具体的应用程序实例的？",
+          "keywords": [
+            "Z-axis scaling request routing userId application instance selection",
+            "router consistent hashing userId session affinity sticky sessions",
+            "microservice instance routing userId-based partitioning load balancing",
+            "distributed system request routing userId sharding instance selection"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "微服务架构中的软件组件如何根据当前容量和预测需求独立扩展计算资源？",
+          "keywords": [
+            "microservices architecture horizontal autoscaling capacity planning",
+            "predictive scaling resource provisioning Kubernetes HPA VPA",
+            "load balancing elastic scaling demand forecasting algorithms",
+            "cloud-native compute resource isolation container orchestration"
+          ],
+          "r_vec": 18,
+          "r_rer": 1
+        },
+        {
+          "q": "当单体应用的通信功能遇到流量激增时，为什么必须增加计算资源会导致资源浪费？",
+          "keywords": [
+            "monolithic application communication traffic spike scalability bottleneck",
+            "vertical scaling resource wastage autoscaling inefficiency",
+            "microservices vs monolith communication overhead load balancing",
+            "traffic surge resource allocation elasticity cloud computing cost"
+          ],
+          "r_vec": 41,
+          "r_rer": 2
+        },
+        {
+          "q": "微服务架构的持续部署特性如何改变发布更新的频率？",
+          "keywords": [
+            "microservices continuous deployment release frequency",
+            "CI/CD pipeline microservice deployment automation",
+            "deployment cadence microservices DevOps practices",
+            "release cycle microservices continuous delivery metrics"
+          ],
+          "r_vec": 4,
+          "r_rer": 1
+        },
+        {
+          "q": "Amazon Prime Video 为什么将其音频和视频质量监控应用从微服务架构改为单体应用？",
+          "keywords": [
+            "Amazon Prime Video microservice monolithic migration",
+            "video quality monitoring architecture scalability",
+            "AWS cloud cost optimization latency",
+            "media streaming backend system design"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在CI/CD管道中，如果出现问题，系统可以采取什么行动？",
+          "keywords": [
+            "CI/CD pipeline failure handling automated rollback",
+            "continuous integration deployment incident response actions",
+            "CI/CD pipeline error remediation alerting notification",
+            "rollback strategy automated recovery deployment pipeline"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        },
+        {
+          "q": "团队规模超过多少名开发人员时，建议采用微服务架构？",
+          "keywords": [
+            "microservices architecture team size scalability",
+            "developer team composition service decomposition Conway's Law",
+            "microservice adoption criteria organizational structure",
+            "team scaling service-oriented architecture migration threshold"
+          ],
+          "r_vec": 3,
+          "r_rer": 1
+        },
+        {
+          "q": "为什么Kubernetes对于许多刚开始的团队来说不太适用？",
+          "keywords": [
+            "Kubernetes adoption challenges small teams",
+            "Kubernetes operational complexity overhead",
+            "Kubernetes resource cost management",
+            "Kubernetes learning curve infrastructure"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        },
+        {
+          "q": "在Camunda的代理设计中，针对工具部分有哪些具体的设计原则？",
+          "keywords": [
+            "Camunda BPM workflow agent design principles",
+            "Camunda task tool specification delegate expression",
+            "Camunda service task Java delegate implementation",
+            "Camunda connector task external task pattern"
+          ],
+          "r_vec": 1,
+          "r_rer": 1
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "records": [
+        {
+          "q": "模仿学习和强化学习中，从少量演示或试验中学习的具体研究挑战是什么？",
+          "keywords": [
+            "imitation learning few-shot demonstration challenge",
+            "reinforcement learning sample efficiency sparse reward",
+            "meta-learning apprenticeship learning from demonstration",
+            "offline reinforcement learning limited interaction data"
+          ],
+          "r_vec": 27,
+          "r_rer": 1
+        },
+        {
+          "q": "学习方式有哪两种选择？",
+          "keywords": [
+            "learning paradigms supervised unsupervised",
+            "training strategies active learning",
+            "supervised learning unsupervised learning",
+            "reinforcement learning self-supervised"
+          ],
+          "r_vec": null,
+          "r_rer": null
+        },
+        {
+          "q": "根据研究，AGI预计在何时达到奇点，届时AI将对社会产生什么影响？",
+          "keywords": [
+            "artificial general intelligence singularity timeline prediction",
+            "AGI impact society technological disruption risk",
+            "technological singularity forecasting economic social disruption",
+            "AI societal impact labor market transformation existential risk"
+          ],
+          "r_vec": 13,
+          "r_rer": 1
+        },
+        {
+          "q": "根据文本片段，批判者通常如何通过人类智力特征来论证当前最先进的AI系统无法实现强AI？",
+          "keywords": [
+            "strong AI argument critique human intelligence features",
+            "artificial general intelligence cognitive capabilities limitations",
+            "philosophical zombies qualia consciousness debate",
+            "Chinese room argument Searle symbol grounding problem"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "第36届NeurIPS会议上，Fan等人发表的论文标题是什么？",
+          "keywords": [
+            "NeurIPS 2023 Fan paper title",
+            "NeurIPS conference proceedings 36th",
+            "Fan et al NeurIPS 2023 publication",
+            "NeurIPS 2023 accepted papers Fan author"
+          ],
+          "r_vec": 7,
+          "r_rer": 1
+        },
+        {
+          "q": "在灾难救援中，具身无人机如何通过语言模型来理解并遵循人类语音指令，例如“在倒塌的桥梁附近搜索”？",
+          "keywords": [
+            "embodied drone disaster rescue speech instruction following",
+            "language model grounded navigation disaster response UAV",
+            "voice command understanding robot search and rescue",
+            "multimodal instruction following drone deployment collapse bridge"
+          ],
+          "r_vec": 4,
+          "r_rer": 2
+        },
+        {
+          "q": "GPT-4通过自我反思技术在高难度测试中的表现提升了多少百分比？",
+          "keywords": [
+            "GPT-4 self-reflection high-difficulty benchmarks performance improvement percentage",
+            "self-reflection prompting technique LLM test accuracy gains",
+            "GPT-4 evaluation MMLU HumanEval high-difficulty metrics",
+            "self-critique chain-of-thought reflection augmentation accuracy"
+          ],
+          "r_vec": 24,
+          "r_rer": 2
+        },
+        {
+          "q": "如何确认你正在安全地连接到美国政府网站？",
+          "keywords": [
+            "TLS certificate validation HTTPS government website",
+            "domain verification .gov TLD security indicators",
+            "HSTS preload list US government web security",
+            "SSL certificate chain of trust federal agency"
+          ],
+          "r_vec": 2,
+          "r_rer": 1
+        },
+        {
+          "q": "谁撰写了2013年发表在Science上的文章，该文探讨了脑结构与功能网络与认知之间的关系？",
+          "keywords": [
+            "brain structure function network cognition Science 2013",
+            "neuroimaging connectome cognitive ability brain network",
+            "structural functional connectivity intelligence neuroscience",
+            "brain network topology cognitive performance fMRI DTI"
+          ],
+          "r_vec": 10,
+          "r_rer": 3
+        },
+        {
+          "q": "学习数据分析时，有哪些授课形式可以选择？",
+          "keywords": [
+            "data analysis instructional methods online courses",
+            "data science pedagogy blended learning MOOC",
+            "data analysis training workshop bootcamp",
+            "data analytics teaching formats self-paced instructor-led"
+          ],
+          "r_vec": 1,
+          "r_rer": 2
+        }
+      ]
+    }
+  ],
+  "elapsed_seconds": 494.2
+}
