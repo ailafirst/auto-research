@@ -50,24 +50,84 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Qdrant 连接检查失败: %s", exc)
 
-    # 预热 embedding / reranker 模型
-    # 首次加载 bge-m3 约 20-30s，bge-reranker 约 5-10s；在 lifespan 里提前加载，
-    # 使第一个真实研究请求的 evidence_builder 和 analyst 节点不需要等待模型冷启动。
+    # 预连接任务队列（arq）；不可用则请求时回退进程内执行。提到模型预热之前，
+    # 因为「本进程是否需要本地模型」取决于队列是否真的接管了研究流程。
+    queue_ready = False
     try:
-        from app.services.rag_service import get_rag_service, _get_reranker
-        rag = get_rag_service()
-        if settings.embedding_provider == "st":
-            await rag._get_st_model()
-        elif settings.embedding_provider == "fastembed":
-            await rag._get_fastembed_model()
-        logger.info("Embedding 模型预热完成: %s", settings.embedding_model)
-        if settings.reranker_enabled:
-            await _get_reranker()
-            logger.info("Reranker 模型预热完成: %s", settings.reranker_model)
+        from app.services.queue import get_arq_pool
+        if settings.queue_enabled and await get_arq_pool() is not None:
+            queue_ready = True
+            logger.info("任务队列已就绪（arq，需另起 `arq app.worker.WorkerSettings`）")
+        else:
+            logger.info("任务队列未启用，任务将进程内执行")
     except Exception as exc:
-        logger.warning("模型预热失败（不影响启动）: %s", exc)
+        logger.warning("任务队列初始化失败（回退进程内）: %s", exc)
+
+    # 预热 embedding / reranker 模型 —— 仅当本进程可能真正执行研究流程时才需要：
+    #   - 配置了模型服务：worker/API 都走 HTTP，本进程永不本地加载模型；
+    #   - 队列已就绪：研究流程在独立 worker 进程执行，API 进程不会碰 RAG。
+    # 两者皆非时，队列不可用会静默回退到本进程内 asyncio.create_task 执行研究
+    # （见 routes_research.py），此时仍需预热，否则第一个请求要等模型冷启动。
+    if settings.model_service_url:
+        logger.info("已配置模型服务 (%s)，API 进程跳过本地模型预热", settings.model_service_url)
+    elif queue_ready:
+        logger.info("任务队列已接管研究流程，API 进程跳过本地模型预热")
+    else:
+        # 首次加载 bge-m3 约 20-30s，bge-reranker 约 5-10s；在 lifespan 里提前加载，
+        # 使第一个真实研究请求的 evidence_builder 和 analyst 节点不需要等待模型冷启动。
+        try:
+            from app.services.rag_service import get_rag_service, _get_reranker
+            rag = get_rag_service()
+            if settings.embedding_provider == "st":
+                await rag._get_st_model()
+            elif settings.embedding_provider == "fastembed":
+                await rag._get_fastembed_model()
+            logger.info("Embedding 模型预热完成: %s", settings.embedding_model)
+            if settings.reranker_enabled:
+                await _get_reranker()
+                logger.info("Reranker 模型预热完成: %s", settings.reranker_model)
+        except Exception as exc:
+            logger.warning("模型预热失败（不影响启动）: %s", exc)
+
+    # 初始化缓存（Redis）—— 失败仅告警，缓存自动降级为旁路，不影响启动
+    try:
+        from app.services.cache_service import get_cache
+        cache = get_cache()
+        if cache.enabled and await cache.ping():
+            logger.info("缓存连接成功: %s", settings.redis_url)
+    except Exception as exc:
+        logger.warning("缓存初始化失败（不影响启动）: %s", exc)
+
+    # 初始化数据库（SQLite 系统记录，建表幂等）
+    try:
+        from app.services.db import init_db
+        await init_db()
+        logger.info("数据库就绪: %s", settings.database_url)
+    except Exception as exc:
+        logger.warning("数据库初始化失败: %s", exc)
 
     yield
+
+    # 输出缓存命中统计并关闭连接
+    try:
+        from app.services.cache_service import get_cache
+        cache = get_cache()
+        cache.log_stats()
+        await cache.aclose()
+    except Exception:
+        pass
+
+    try:
+        from app.services.db import close_db
+        await close_db()
+    except Exception:
+        pass
+
+    try:
+        from app.services.queue import close_arq_pool
+        await close_arq_pool()
+    except Exception:
+        pass
 
     logger.info("Deep Research Agent 关闭")
 

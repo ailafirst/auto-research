@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     chunk_size: int = 800
     chunk_overlap: int = 200
     rag_top_k: int = 6
+    # 本地模型推理精度（仅 cuda 生效；cpu 下 fp16 多数算子不支持，自动退回 fp32）。
+    # fp16 使 bge-m3 显存 2166→1083 MB、reranker 同比减半。对检索质量的影响见
+    # rag_experiments/experiment_fp16.py 在 120 题黄金集上的实测。
+    model_dtype: Literal["fp32", "fp16"] = "fp32"
     reranker_enabled: bool = False
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
     reranker_top_k: int = 6       # rerank 后保留的 chunk 数
@@ -67,8 +71,43 @@ class Settings(BaseSettings):
     # --- 跨语言检索（中文 query 经本地 MT 译为英文，中英双路 dense 检索按 cid 合并）---
     # 解决"中文问题→英文 gold"的 dense 跨语言对齐失效（基准实测 Recall@6 0.858→0.892）。
     # 翻译走独立本地 MT（opus-mt，~20ms/题），不占主 LLM 并发池。
-    xling_enabled: bool = False
+    xling_enabled: bool = True
     translation_model: str = "Helsinki-NLP/opus-mt-zh-en"
+
+    # --- 模型服务化（可选，独立 FastAPI 进程集中装载 embed/rerank/translate）---
+    # 非空时，worker 全部通过 HTTP 调用模型服务，进程内不 import torch/transformers，
+    # 不建 CUDA context（实测每 worker commit 6.9GB→0.75GB）。服务不可达时自动回退
+    # 本地加载（降级安全，与 Redis/队列一致）。启动：uvicorn app.model_server:app --port 8100
+    model_service_url: str = ""
+    model_service_timeout: float = 30.0
+
+    # --- 任务队列（arq，多 worker）---
+    # true=优先入 arq 队列由独立 worker 池执行；不可用时回退进程内 asyncio.create_task。
+    queue_enabled: bool = True
+    worker_max_jobs: int = 4        # 单 worker 进程内并发任务数
+    job_timeout: int = 1800         # 单个研究任务超时（秒）
+
+    # --- 持久化（关系型系统记录 SoR）---
+    # 默认 SQLite（零基础设施；WAL 支持单机多 worker 共享）。多机部署时改成
+    # mysql+aiomysql://user:pass@host/db 或 postgresql+asyncpg://... 即可，代码不变。
+    database_url: str = "sqlite+aiosqlite:///output/deepresearch.db"
+
+    # --- 分布式限流（Redis 令牌桶）---
+    # 进程内 asyncio.Semaphore 只在单进程有效；多 worker 下用 Redis 令牌桶做「全局速率
+    # 上限」，本地信号量继续兜进程内并发。Redis 不可用时 acquire 直接放行（降级安全）。
+    llm_rate_limit_enabled: bool = True
+    llm_rate_limit_per_sec: float = 12.0   # 全局每秒放行的 LLM 请求数
+    llm_rate_burst: int = 12               # 令牌桶容量（突发上限）
+
+    # --- Cache (Redis) ---
+    # redis_url 为空 → 缓存整体禁用（CacheService 静默旁路，绝不因缓存故障中断研究）。
+    # cache_enabled 是总开关：benchmark 可置 false 以避免缓存扭曲评测（embedding 缓存
+    # 确定性、可保持开启，见 benchmark 说明）。cache_version 改动会使全部旧 key 失效。
+    redis_url: str = ""
+    cache_enabled: bool = True
+    cache_version: str = "v1"
+    search_cache_ttl: int = 21600      # 搜索结果缓存 6h（省 Tavily 配额）
+    emb_cache_ttl: int = 2592000       # embedding 缓存 30d（确定性，可长存）
 
     # --- App ---
     app_env: Literal["development", "production", "testing"] = "development"

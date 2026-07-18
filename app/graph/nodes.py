@@ -1162,23 +1162,3 @@ async def report_writer_node(state: ResearchState) -> dict[str, Any]:
     }
 
 
-def should_continue_research(state: ResearchState) -> str:
-    """判断是否需要进行下一轮研究。"""
-    current_round = state.get("current_round", 1)
-    max_rounds = state.get("max_rounds", 2)
-    fact_check_passed = state.get("fact_check_passed", True)
-    follow_up = state.get("follow_up_queries", [])
-
-    if current_round >= max_rounds:
-        logger.info("达到最大研究轮数 (%d)，结束研究", max_rounds)
-        return "report_writer"
-
-    if not fact_check_passed and follow_up:
-        logger.info(
-            "事实核查未通过，进入第 %d 轮补充研究",
-            current_round + 1,
-        )
-        return "retriever"
-
-    logger.info("事实核查通过，进入报告生成")
-    return "report_writer"

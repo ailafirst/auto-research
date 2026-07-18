@@ -25,6 +25,7 @@ output/
 # OS
 .DS_Store
 Thumbs.db
+*.stackdump
 
 # 测试覆盖率
 htmlcov/

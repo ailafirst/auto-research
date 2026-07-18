@@ -365,6 +365,28 @@ async def run_one_task(task: dict, skip_ragas: bool) -> dict:
             "failed": False, "node_times": node_times, "metrics": metrics}
 
 
+# ── 并发执行 ────────────────────────────────────────────────────────────────────
+
+async def _run_with_sem(
+    task: dict, sem: asyncio.Semaphore, skip_ragas: bool,
+    idx: int, total: int,
+) -> dict:
+    async with sem:
+        print(f"\n[{idx}/{total}] {_b(task['id'])} — {task['name']}")
+        t0 = time.perf_counter()
+        result = await run_one_task(task, skip_ragas=skip_ragas)
+        dt = round(time.perf_counter() - t0, 1)
+
+        m = result.get("metrics", {})
+        status = _r("FAILED") if result["failed"] else _g("OK")
+        faith = m.get("faithfulness")
+        ctx   = m.get("context_precision")
+        suffix = f"  faithfulness={faith:.3f}  ctx_prec={ctx:.3f}" if faith is not None else ""
+        print(f"  → {status}  耗时={dt}s  gap={m.get('evidence_gap_rate', '?'):.2f}{suffix}"
+              if not result["failed"] else f"  → {status}  耗时={dt}s")
+        return result
+
+
 # ── 结果展示 ──────────────────────────────────────────────────────────────────
 
 # 切片 + 检索阶段（无需 LLM，始终展示）
@@ -467,7 +489,8 @@ async def _warmup_models() -> None:
     print(f"  {DIM}模型预热完成（{time.perf_counter()-t0:.1f}s）{RESET}", flush=True)
 
 
-async def main(task_ids: list[str], save: bool, skip_ragas: bool) -> None:
+async def main(task_ids: list[str], concurrency: int, save: bool,
+               skip_ragas: bool) -> None:
     _patch_rag()
 
     all_tasks = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
@@ -481,36 +504,38 @@ async def main(task_ids: list[str], save: bool, skip_ragas: bool) -> None:
         print("无有效任务，退出", file=sys.stderr)
         sys.exit(1)
 
+    c = min(concurrency, len(selected))
     print(f"{'═' * 72}")
     print(f"  {_b('benchmark_rag')} — RAG 多任务基准测试（RAGAS LLM-judge）")
-    print(f"  任务: {[t['id'] for t in selected]}")
+    print(f"  任务: {[t['id'] for t in selected]}  "
+          f"{_d(f'共 {len(selected)} 个 · 并发 {c}')}")
     if skip_ragas:
         print(f"  {_y('RAGAS 评测已跳过（--skip-ragas）')}")
     print(f"{'═' * 72}")
 
     await _warmup_models()
 
-    results: list[dict] = []
-    total_start = time.perf_counter()
+    sem   = asyncio.Semaphore(c)
+    total = len(selected)
 
-    for i, task in enumerate(selected, 1):
-        print(f"\n[{i}/{len(selected)}] {_b(task['id'])} — {task['name']}")
-        t0     = time.perf_counter()
-        result = await run_one_task(task, skip_ragas=skip_ragas)
-        dt     = round(time.perf_counter() - t0, 1)
-        results.append(result)
+    wall_start = time.perf_counter()
+    results_unordered = await asyncio.gather(
+        *[_run_with_sem(t, sem, skip_ragas, i + 1, total)
+          for i, t in enumerate(selected)],
+    )
+    wall_elapsed = time.perf_counter() - wall_start
 
-        m      = result.get("metrics", {})
-        status = _r("FAILED") if result["failed"] else _g("OK")
-        faith  = m.get("faithfulness")
-        ctx    = m.get("context_precision")
-        suffix = f"  faithfulness={faith:.3f}  ctx_prec={ctx:.3f}" if faith is not None else ""
-        print(f"  → {status}  耗时={dt}s  gap={m.get('evidence_gap_rate', '?'):.2f}{suffix}"
-              if not result["failed"] else f"  → {status}  耗时={dt}s")
+    # 按任务 ID 排序恢复原始顺序
+    order   = {t["id"]: i for i, t in enumerate(selected)}
+    results = sorted(results_unordered, key=lambda r: order.get(r["task_id"], 999))
 
-    total_dt = round(time.perf_counter() - total_start, 1)
+    # 并发效率
+    serial_total = sum(sum(r.get("node_times", {}).values()) for r in results)
+    efficiency   = serial_total / (c * wall_elapsed) if wall_elapsed > 0 else 0
+
     print_results_table(results, skip_ragas)
-    print(f"\n  总耗时: {total_dt}s")
+    print(f"\n  挂钟耗时: {wall_elapsed:.0f}s（并发 {c}）  "
+          f"串行总量: {serial_total:.0f}s  并发效率: {efficiency:.0%}")
 
     if save:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -519,7 +544,11 @@ async def main(task_ids: list[str], save: bool, skip_ragas: bool) -> None:
         payload = {
             "timestamp": datetime.now().isoformat(),
             "tasks":     [t["id"] for t in selected],
-            "skip_ragas": skip_ragas,
+            "concurrency": c,
+            "skip_ragas":  skip_ragas,
+            "wall_elapsed": wall_elapsed,
+            "serial_total": serial_total,
+            "concurrency_efficiency": round(efficiency, 3),
             "results":   results,
         }
         for r in payload["results"]:
@@ -537,10 +566,13 @@ if __name__ == "__main__":
     )
     parser.add_argument("task_ids", nargs="*", default=DEFAULT_TASKS,
                         help="任务 ID 列表（默认: 全部 12 个）")
+    parser.add_argument("-c", "--concurrency", type=int, default=3,
+                        help="最大并发任务数（默认 3；analyst 内部 LLM 并发=3，"
+                             "全局 LLM 预算=10，3 任务 × 3=9 ≤ 10 安全）")
     parser.add_argument("--save", action="store_true",
                         help="结果写入 benchmark/results/rag_YYYYMMDD.json")
     parser.add_argument("--skip-ragas", dest="skip_ragas", action="store_true",
                         help="跳过 RAGAS LLM 评测，只显示运营指标（快速模式）")
     args = parser.parse_args()
 
-    asyncio.run(main(args.task_ids, args.save, args.skip_ragas))
+    asyncio.run(main(args.task_ids, args.concurrency, args.save, args.skip_ragas))

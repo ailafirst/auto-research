@@ -7,9 +7,12 @@ import logging
 import re
 from typing import Any
 
+import httpx
+
 from app.core.config import settings
 from app.core.exceptions import VectorStoreError
 from app.models.source import CrawledDocument, EvidenceChunk
+from app.services.cache_service import get_cache
 from app.services.markdown_cleaner import is_boilerplate, md_to_text
 from app.services.vector_store import VectorStoreService
 
@@ -138,6 +141,31 @@ class TextChunker:
         return self.chunk_text(doc.content, source_id, task_id, doc.url, doc.title)
 
 
+def _dtype_kwargs(device: str) -> dict[str, Any]:
+    """按 settings.model_dtype 返回模型加载的精度参数。
+
+    仅 cuda 下启用 fp16：CPU 上 half 精度多数算子无内核实现，会直接报错。
+    """
+    if settings.model_dtype != "fp16" or device != "cuda":
+        return {}
+    import torch
+    return {"model_kwargs": {"dtype": torch.float16}}
+
+
+_http_client: httpx.AsyncClient | None = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    """指向 model_service_url 的共享 HTTP 客户端（进程级单例，连接复用）。"""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            base_url=settings.model_service_url,
+            timeout=settings.model_service_timeout,
+        )
+    return _http_client
+
+
 class RAGService:
     """RAG 服务 — 整合切片、Embedding 与检索。"""
 
@@ -189,6 +217,7 @@ class RAGService:
                                 settings.embedding_model,
                                 trust_remote_code=True,
                                 device=device,
+                                **_dtype_kwargs(device),
                             )
                             # 限制序列长度：检索 chunk 约 800 字（≈512 token），默认 8192
                             # 会让长段落 chunk 的 encode 显存/耗时爆炸（实测 400chunk
@@ -198,8 +227,8 @@ class RAGService:
 
                         self._embedding_model = await asyncio.to_thread(_load)
                         logger.info(
-                            "sentence-transformers 模型已加载: %s (device=%s)",
-                            settings.embedding_model, device,
+                            "sentence-transformers 模型已加载: %s (device=%s, dtype=%s)",
+                            settings.embedding_model, device, settings.model_dtype,
                         )
                     except ImportError:
                         raise VectorStoreError("sentence-transformers 未安装，请执行: pip install sentence-transformers")
@@ -208,12 +237,73 @@ class RAGService:
         return self._embedding_model
 
     async def _embed(self, texts: list[str]) -> list[list[float]]:
-        """统一 Embedding 入口，根据 embedding_provider 路由。"""
+        """统一 Embedding 入口 — 先查缓存，只对未命中文本真正计算。
+
+        embedding 确定性：同一 (model, dim, dtype, text) 的向量恒定，可长存复用
+        （跨任务、跨 benchmark）。缓存 key 必须覆盖所有会改变向量的因素，否则换配置
+        会静默读到旧配置的向量 —— dtype 尤其隐蔽：fp16 与 fp32 算出的向量不同，
+        漏掉它会让 fp16 直接命中 fp32 的缓存（fp16 基准实验即因此失真过）。
+        """
+        if not texts:
+            return []
+
+        cache = get_cache()
+        if not cache.enabled:
+            return await self._embed_raw(texts)
+
+        keys = [
+            cache.key(
+                "emb", settings.embedding_model, settings.embedding_dim,
+                settings.model_dtype, t,
+            )
+            for t in texts
+        ]
+        cached = await cache.mget_json(keys)
+        miss_idx = [i for i, v in enumerate(cached) if v is None]
+
+        if miss_idx:
+            fresh = await self._embed_raw([texts[i] for i in miss_idx])
+            import math
+            to_write: dict[str, Any] = {}
+            for j, i in enumerate(miss_idx):
+                vec = fresh[j]
+                cached[i] = vec
+                # 跳过 NaN/inf 向量：空文本/零范数会产生 NaN，缓存无意义且下游会过滤
+                if vec and all(math.isfinite(x) for x in vec):
+                    to_write[keys[i]] = vec
+            await cache.mset_json(to_write, settings.emb_cache_ttl)
+            logger.debug(
+                "embedding 缓存: %d 命中 / %d 计算（共 %d）",
+                len(texts) - len(miss_idx), len(miss_idx), len(texts),
+            )
+
+        return cached  # type: ignore[return-value]
+
+    async def _embed_raw(self, texts: list[str]) -> list[list[float]]:
+        """真正的 Embedding 计算，根据 embedding_provider 路由（不经缓存）。
+
+        model_service_url 配置时优先走远程模型服务（多 worker 共享一份模型，
+        worker 进程不 import torch）；服务不可达时自动回退本地加载，与 Redis
+        缓存/arq 队列一致的降级安全原则。
+        """
+        if settings.model_service_url:
+            try:
+                return await self._embed_via_service(texts)
+            except Exception as exc:
+                logger.warning("模型服务 embed 调用失败，回退本地加载: %s", exc)
+
         if settings.embedding_provider == "api":
             return await self._embed_via_api(texts)
         if settings.embedding_provider == "st":
             return await self._embed_via_st(texts)
         return await self._embed_via_fastembed(texts)
+
+    async def _embed_via_service(self, texts: list[str]) -> list[list[float]]:
+        """通过模型服务 HTTP 调用远程 embedding。"""
+        client = _get_http_client()
+        resp = await client.post("/embed", json={"texts": texts})
+        resp.raise_for_status()
+        return resp.json()["vectors"]
 
     async def _embed_via_st(self, texts: list[str]) -> list[list[float]]:
         """sentence-transformers 本地推理（支持 GPU）。"""
@@ -407,11 +497,34 @@ async def _get_reranker() -> Any:
                 import torch
                 from sentence_transformers import CrossEncoder
                 device = "cuda" if torch.cuda.is_available() else "cpu"
-                return CrossEncoder(model_name, device=device)
+                return CrossEncoder(model_name, device=device, **_dtype_kwargs(device))
 
             _reranker_singleton = await asyncio.to_thread(_load)
-            logger.info("Reranker 已加载: %s", model_name)
+            logger.info(
+                "Reranker 已加载: %s (dtype=%s)", model_name, settings.model_dtype,
+            )
     return _reranker_singleton
+
+
+async def _rerank_scores(query: str, texts: list[str]) -> list[float]:
+    """本地 CrossEncoder 打分 —— 被 rerank_chunks 的本地路径与模型服务的
+    /rerank 端点共用（模型服务进程即是这份 reranker 单例的持有者）。"""
+    reranker = await _get_reranker()
+    pairs = [(query, t) for t in texts]
+
+    def _predict() -> list[float]:
+        return reranker.predict(pairs).tolist()
+
+    async with _rerank_predict_lock:
+        return await asyncio.to_thread(_predict)
+
+
+async def _rerank_via_service(query: str, texts: list[str]) -> list[float]:
+    """通过模型服务 HTTP 调用远程 rerank 打分。"""
+    client = _get_http_client()
+    resp = await client.post("/rerank", json={"query": query, "texts": texts})
+    resp.raise_for_status()
+    return resp.json()["scores"]
 
 
 async def rerank_chunks(
@@ -419,19 +532,25 @@ async def rerank_chunks(
     chunks: list[dict[str, Any]],
     top_k: int | None = None,
 ) -> list[dict[str, Any]]:
-    """用 CrossEncoder 对 chunks 重排序，返回前 top_k 条。"""
+    """用 CrossEncoder 对 chunks 重排序，返回前 top_k 条。
+
+    model_service_url 配置时优先走远程打分；不可达时自动回退本地加载。
+    """
     if not chunks:
         return chunks
     k = top_k or settings.reranker_top_k
-    reranker = await _get_reranker()
     # 截断上限覆盖整个 chunk（切分后 ≤chunk_size≈800 字符），避免只按前半段打分
-    pairs = [(query, c.get("text", "")[:1024]) for c in chunks]
+    texts = [c.get("text", "")[:1024] for c in chunks]
 
-    def _predict() -> list[float]:
-        return reranker.predict(pairs).tolist()
+    scores: list[float] | None = None
+    if settings.model_service_url:
+        try:
+            scores = await _rerank_via_service(query, texts)
+        except Exception as exc:
+            logger.warning("模型服务 rerank 调用失败，回退本地加载: %s", exc)
+    if scores is None:
+        scores = await _rerank_scores(query, texts)
 
-    async with _rerank_predict_lock:
-        scores = await asyncio.to_thread(_predict)
     ranked = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
     logger.info(
         "Rerank: %d → %d chunks，top分: %.3f",

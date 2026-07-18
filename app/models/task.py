@@ -76,6 +76,7 @@ class ResearchTaskCreate(BaseModel):
 class TaskStatusResponse(BaseModel):
     """任务状态响应。"""
     task_id: str
+    query: str = ""
     status: str
     progress: int = 0
     progress_message: str = ""
@@ -95,6 +96,9 @@ class TaskDetailResponse(BaseModel):
     research_plan: dict[str, Any] | None = None
     search_results: list[dict[str, Any]] = []
     evaluated_sources: list[dict[str, Any]] = []
+    # 完整产出（供 benchmark / 前端一次拉取，替代已废弃的 output/tasks/*.json）
+    final_report: str | None = None
+    fact_check_result: dict[str, Any] | None = None
     created_at: str
     updated_at: str
     error_message: str | None = None
@@ -107,3 +111,35 @@ class TaskReportResponse(BaseModel):
     report: str | None = None
     sources: list[str] = []
     error_message: str | None = None
+
+
+class TaskProgressResponse(BaseModel):
+    """研究过程实时快照 — 供前端做「过程透明」可视化，逐节点填充。
+
+    冷热分层：这些中间产物量大且高频变化，只写 Redis 热层（见 task_service
+    write_progress_detail），不落 SQLite；任务完成后前端改拉 /report 或 /detail。
+    """
+    task_id: str
+    status: str
+    progress: int = 0
+    progress_message: str = ""
+    current_round: int = 0
+    max_rounds: int = 2
+    # ── 研究过程中间数据（随节点推进逐步填充）──
+    research_strategy: dict[str, Any] = {}          # {intent, domain, depth}
+    sub_questions: list[dict[str, Any]] = []        # [{id, question, search_queries}]
+    search_queries: list[str] = []
+    search_summaries: list[dict[str, Any]] = []     # [{sq_id, answer}] Tavily 摘要
+    sources: list[dict[str, Any]] = []              # evaluated_sources 元数据
+    crawled_count: int = 0
+    evidence_count: int = 0
+    citation_registry: list[dict[str, Any]] = []    # [{id, title, url}]
+    sub_answers: list[dict[str, Any]] = []          # [{sub_question_id, question, answer, citations, confidence, evidence_gap}]
+    fact_check: dict[str, Any] = {}                 # {passed, issues:[{type,claim,reason}], follow_up_queries}
+    fact_check_passed: bool = True
+    follow_up_queries: list[str] = []
+    rounds: list[dict[str, Any]] = []               # 已完成轮次摘要 [{round, fact_check_passed, issues_count, follow_up_queries}]
+    # 完成时一并带上，前端可直接渲染报告
+    final_report: str | None = None
+    error_message: str | None = None
+    updated_at: str = ""

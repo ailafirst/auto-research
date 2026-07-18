@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.graph.nodes import (
-    planner_node,
-    should_continue_research,
-)
+from app.graph.nodes import planner_node
 
 
 @pytest.mark.asyncio
@@ -51,40 +48,3 @@ async def test_planner_node_basic() -> None:
 
 
 
-def test_should_continue_max_rounds() -> None:
-    """达到最大轮数时应结束。"""
-    state = {
-        "task_id": "test_003",
-        "current_round": 2,
-        "max_rounds": 2,
-        "fact_check_passed": False,
-        "follow_up_queries": ["query1"],
-    }
-    result = should_continue_research(state)  # type: ignore
-    assert result == "report_writer"
-
-
-def test_should_continue_fact_check_passed() -> None:
-    """事实核查通过时应结束。"""
-    state = {
-        "task_id": "test_004",
-        "current_round": 1,
-        "max_rounds": 3,
-        "fact_check_passed": True,
-        "follow_up_queries": [],
-    }
-    result = should_continue_research(state)  # type: ignore
-    assert result == "report_writer"
-
-
-def test_should_continue_more_rounds() -> None:
-    """可继续研究时应返回 retriever。"""
-    state = {
-        "task_id": "test_005",
-        "current_round": 1,
-        "max_rounds": 3,
-        "fact_check_passed": False,
-        "follow_up_queries": ["补充搜索词"],
-    }
-    result = should_continue_research(state)  # type: ignore
-    assert result == "retriever"

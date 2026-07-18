@@ -13,6 +13,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 from app.core.config import settings
 from app.core.exceptions import SearchServiceError
 from app.models.source import SearchResult
+from app.services.cache_service import get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -226,8 +227,31 @@ class SearchService:
         return await self.provider.search(query, max_results=max_results)
 
     async def search(self, query: str, max_results: int | None = None) -> list[SearchResult]:
-        """执行单次搜索，限速时重试，额度耗尽时轮换 key，最终失败降级 DuckDuckGo。"""
+        """执行单次搜索，限速时重试，额度耗尽时轮换 key，最终失败降级 DuckDuckGo。
+
+        命中缓存时直接返回，完全跳过 Tavily（省配额）。缓存 key 含 provider 与影响返回体
+        的 Tavily 参数；只缓存非空结果，避免把瞬时失败/零结果固化。缓存的是未打
+        sub_question_id 的原始结果，打标由调用方（retriever_node）在返回后进行。
+        """
         n_results = max_results or settings.max_search_results
+
+        cache = get_cache()
+        cache_key = cache.key(
+            "search",
+            self._current_provider,
+            query.strip(),
+            n_results,
+            settings.tavily_search_depth,
+            settings.tavily_include_raw_content,
+        )
+        cached = await cache.get_json(cache_key)
+        if cached is not None:
+            logger.info(
+                "搜索缓存命中 [%s]: query='%s', results=%d",
+                self._current_provider, query[:50], len(cached),
+            )
+            return [SearchResult(**d) for d in cached]
+
         pool = _get_key_pool()
 
         results: list[SearchResult] = []
@@ -256,6 +280,14 @@ class SearchService:
 
         engine = self._current_provider if results else "duckduckgo(fallback)"
         logger.info("搜索完成 [%s]: query='%s', results=%d", engine, query[:50], len(results))
+
+        # 只缓存非空结果：零结果多为瞬时失败/配额耗尽，不应被固化到 TTL 结束
+        if results:
+            await cache.set_json(
+                cache_key,
+                [r.model_dump() for r in results],
+                settings.search_cache_ttl,
+            )
         return results
 
     async def probe_key_pool(self) -> None:

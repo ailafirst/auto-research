@@ -49,9 +49,24 @@ class TranslationService:
             )
 
     async def translate(self, text: str) -> str:
-        """翻译单条文本；失败时返回空串（调用方据此降级为单路检索）。"""
+        """翻译单条文本；失败时返回空串（调用方据此降级为单路检索）。
+
+        model_service_url 配置时优先走远程模型服务；不可达时自动回退本地加载。
+        """
         if not text or not text.strip():
             return ""
+
+        if settings.model_service_url:
+            try:
+                return await self._translate_via_service(text)
+            except Exception as exc:
+                logger.warning("模型服务 translate 调用失败，回退本地加载: %s", exc)
+
+        return await self._translate_local(text)
+
+    async def _translate_local(self, text: str) -> str:
+        """本地 MT 推理 —— 被 translate() 的本地路径与模型服务的 /translate
+        端点共用（模型服务进程即是这份翻译模型单例的持有者，不应再转发 HTTP）。"""
         await self._ensure_loaded()
 
         def _run() -> str:
@@ -70,6 +85,14 @@ class TranslationService:
             except Exception as exc:
                 logger.warning("翻译失败，降级为单路检索: %s", exc)
                 return ""
+
+    async def _translate_via_service(self, text: str) -> str:
+        """通过模型服务 HTTP 调用远程翻译（复用 rag_service 的共享 HTTP 客户端）。"""
+        from app.services.rag_service import _get_http_client
+        client = _get_http_client()
+        resp = await client.post("/translate", json={"text": text})
+        resp.raise_for_status()
+        return resp.json()["translation"]
 
 
 _translation_singleton: TranslationService | None = None

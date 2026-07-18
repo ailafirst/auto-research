@@ -5,13 +5,16 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from app.graph.builder import build_research_graph
+from app.core.config import settings
 from app.models.task import (
     ResearchTaskCreate,
     TaskDetailResponse,
+    TaskProgressResponse,
     TaskReportResponse,
     TaskStatusResponse,
 )
+from app.services.queue import get_arq_pool
+from app.services.research_runner import run_research
 from app.services.task_service import TaskService
 
 logger = logging.getLogger(__name__)
@@ -22,7 +25,11 @@ task_service = TaskService()
 
 @router.post("", response_model=dict[str, str], status_code=201)
 async def create_research_task(params: ResearchTaskCreate) -> dict[str, str]:
-    """创建新的研究任务。"""
+    """创建新的研究任务。
+
+    优先入 arq 队列由独立 worker 池执行（解耦、背压、横向扩展）；
+    队列不可用时回退进程内 asyncio.create_task（单机开发无需另起 worker）。
+    """
     task = await task_service.create_task(
         query=params.query,
         max_rounds=params.max_rounds,
@@ -33,9 +40,21 @@ async def create_research_task(params: ResearchTaskCreate) -> dict[str, str]:
         enable_fact_check=params.enable_fact_check,
     )
 
-    # 异步启动研究流程
-    asyncio.create_task(_run_research(task.task_id))
+    enqueued = False
+    if settings.queue_enabled:
+        pool = await get_arq_pool()
+        if pool is not None:
+            try:
+                # _job_id=task_id：同一任务重复提交自动去重（幂等）
+                await pool.enqueue_job("run_research_job", task.task_id, _job_id=task.task_id)
+                enqueued = True
+            except Exception as exc:
+                logger.warning("入队失败，回退进程内执行: %s", exc)
 
+    if not enqueued:
+        asyncio.create_task(run_research(task.task_id))
+
+    logger.info("任务派发 [%s]: %s", "queue" if enqueued else "inproc", task.task_id)
     return {"task_id": task.task_id, "status": task.status}
 
 
@@ -44,6 +63,15 @@ async def get_task_status(task_id: str) -> TaskStatusResponse:
     """查询任务状态。"""
     try:
         return await task_service.get_task_status(task_id)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/{task_id}/progress", response_model=TaskProgressResponse)
+async def get_task_progress(task_id: str) -> TaskProgressResponse:
+    """研究过程实时快照（状态 + 中间产物），供前端过程透明可视化轮询。"""
+    try:
+        return await task_service.get_task_progress(task_id)
     except Exception as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -70,204 +98,3 @@ async def get_task_report(task_id: str) -> TaskReportResponse:
 async def list_tasks() -> list[TaskStatusResponse]:
     """列出所有任务。"""
     return await task_service.list_tasks()
-
-
-async def _run_research(task_id: str) -> None:
-    """在后台执行研究流程，使用流式获取实时进度。"""
-    try:
-        task = await task_service.get_task(task_id)
-
-        # 构建 LangGraph 工作流
-        research_graph = build_research_graph()
-
-        # 状态映射：node_name → 友好名称
-        NODE_LABELS = {
-            "planner": "正在分析研究问题...",
-            "retriever": "正在搜索相关资料...",
-            "content_extractor": "正在抓取网页内容...",
-            "source_evaluator": "正在评估信源质量...",
-            "evidence_builder": "正在构建证据索引...",
-            "analyst": "正在分析研究内容...",
-            "fact_checker": "正在事实核查...",
-            "report_writer": "正在生成研究报告...",
-        }
-        NODE_PROGRESS = {
-            "planner": 10,
-            "retriever": 25,
-            "content_extractor": 40,
-            "source_evaluator": 50,
-            "evidence_builder": 60,
-            "analyst": 70,
-            "fact_checker": 80,
-            "report_writer": 90,
-        }
-
-        def _build_state(round_num: int, extra: dict | None = None) -> dict:
-            # 将用户显式设置的参数作为 hint 传给 planner，不设置时传空 dict 让 LLM 自行判断
-            user_hints: dict = {}
-            if task.report_type != "deep":   # 非默认值才视为有意设置
-                user_hints["report_type"] = task.report_type
-            if task.search_depth != "advanced":
-                user_hints["search_depth"] = task.search_depth
-
-            state = {
-                "task_id": task_id,
-                "query": task.query,
-                "language": task.language,
-                "max_rounds": task.max_rounds,
-                "current_round": round_num,
-                "status": "planning",
-                "user_hints": user_hints,
-                "research_strategy": {},
-                "research_plan": {},
-                "sub_questions": [],
-                "search_queries": [],
-                "search_results": [],
-                "search_summaries": [],
-                "crawled_documents": [],
-                "evaluated_sources": [],
-                "evidence_chunks": [],
-                "sub_answers": [],
-                "fact_check_result": {},
-                "fact_check_passed": True,
-                "follow_up_queries": [],
-                "citation_mismatches": [],
-                "analyst_revision_done": False,
-                "final_report": "",
-                "errors": [],
-                "progress": 0,
-                "progress_message": "",
-                "created_at": task.created_at,
-                "updated_at": task.updated_at,
-            }
-            if extra:
-                state.update(extra)
-            return state
-
-        async def _run_round(current_state: dict) -> dict:
-            """执行一轮研究，流式获取进度。"""
-            final_state = current_state.copy()
-            async for chunk in research_graph.astream(
-                current_state, stream_mode="updates",
-            ):
-                # chunk 格式: {node_name: state_update}
-                for node_name, state_update in chunk.items():
-                    final_state.update(state_update)
-
-                    label = NODE_LABELS.get(node_name, f"正在执行 {node_name}...")
-                    pct = state_update.get("progress") or NODE_PROGRESS.get(node_name, 0)
-                    msg = state_update.get("progress_message") or label
-
-                    await task_service.update_task(
-                        task_id,
-                        status=node_name,
-                        progress=pct,
-                        progress_message=msg,
-                    )
-            return final_state
-
-        async def _revise_citations(state: dict) -> dict:
-            """如有 citation_mismatch 且无严重 issue，针对受影响子问题重跑 analyst → fact_checker（验证）→ report_writer。
-            当 fact_check_passed=False 时说明存在严重 issue，即将触发补充搜索，跳过修正避免浪费。"""
-            if not state.get("citation_mismatches") or state.get("analyst_revision_done"):
-                return state
-            if not state.get("fact_check_passed", True):
-                # Serious issues present — supplement search round will run next; skip citation revision
-                return state
-            from app.graph.nodes import analyst_node, fact_checker_node, report_writer_node
-            n = len(state["citation_mismatches"])
-            await task_service.update_task(
-                task_id, status="analyst", progress=72,
-                progress_message=f"修正 {n} 处引用错误...",
-            )
-            # analyst_revision_done=True is passed INTO analyst so the node can skip
-            # non-mismatch sub-questions; we also set it explicitly in the merged state
-            # so _revise_citations won't be called again for the same round.
-            revised = await analyst_node({**state, "analyst_revision_done": True})
-            state = {**state, **revised, "analyst_revision_done": True}
-
-            await task_service.update_task(
-                task_id, status="fact_checker", progress=82,
-                progress_message="验证引用修正结果...",
-            )
-            fc = await fact_checker_node(state)
-            state = {**state, **fc}
-
-            await task_service.update_task(
-                task_id, status="report_writer", progress=88,
-                progress_message="重新生成修订报告...",
-            )
-            rw = await report_writer_node(state)
-            return {**state, **rw}
-
-        # 第一轮研究
-        initial_state = _build_state(1)
-        final_state = await _run_round(initial_state)
-        final_state = await _revise_citations(final_state)
-
-        # 多轮补充研究
-        current_round = 1
-        while current_round < task.max_rounds:
-            if final_state.get("fact_check_passed", True):
-                break
-
-            follow_up = final_state.get("follow_up_queries", [])
-            if not follow_up:
-                break
-
-            current_round += 1
-
-            await task_service.update_task(
-                task_id,
-                status="retrieving",
-                current_round=current_round,
-                progress_message=f"第 {current_round} 轮补充研究...",
-            )
-
-            new_state = _build_state(current_round, {
-                "sub_questions":     final_state.get("sub_questions", []),
-                "research_plan":     final_state.get("research_plan", {}),
-                "research_strategy": final_state.get("research_strategy", {}),
-                "follow_up_queries": follow_up,
-                "search_queries":    follow_up[:5],
-                "search_results":    [],
-                "search_summaries":  [],
-                "crawled_documents": [],
-                "evaluated_sources": [],
-            })
-            final_state = await _run_round(new_state)
-            final_state = await _revise_citations(final_state)
-
-        # 更新任务结果为完成
-        report = final_state.get("final_report", "")
-        await task_service.update_task(
-            task_id,
-            status="completed",
-            progress=100,
-            progress_message="研究完成",
-            final_report=report,
-            fact_check_result=final_state.get("fact_check_result") or {},
-        )
-
-        logger.info("研究任务完成: task_id=%s, 轮数=%d", task_id, current_round)
-
-    except asyncio.CancelledError:
-        logger.warning("研究任务被取消: %s", task_id)
-        await _fail_task(task_id, "任务被取消")
-    except Exception as exc:
-        logger.error("研究任务失败: task_id=%s, error=%s", task_id, exc)
-        await _fail_task(task_id, str(exc))
-
-
-async def _fail_task(task_id: str, error_message: str) -> None:
-    """标记任务失败。"""
-    try:
-        await task_service.update_task(
-            task_id,
-            status="failed",
-            progress=0,
-            progress_message="研究失败",
-            error_message=error_message,
-        )
-    except Exception as exc:
-        logger.error("更新任务失败状态出错: %s", exc)

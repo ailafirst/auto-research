@@ -10,6 +10,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.core.config import settings
 from app.core.exceptions import LLMServiceError
+from app.services.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,14 @@ class LLMService:
             if response_format:
                 kwargs["response_format"] = response_format
 
-            # 全局闸门只裹住网络调用；失败重试由 @retry 在 async with 外侧驱动，
+            # 分布式全局速率上限（多 worker）：先取 Redis 令牌，令牌等待期间不占本地
+            # 并发槽位；Redis 不可用时直接放行，由下方本地信号量兜底（降级安全）。
+            if settings.llm_rate_limit_enabled:
+                await get_rate_limiter().acquire(
+                    "llm", settings.llm_rate_limit_per_sec, settings.llm_rate_burst,
+                )
+
+            # 本地进程内闸门只裹住网络调用；失败重试由 @retry 在 async with 外侧驱动，
             # 故退避 sleep 时不占用并发槽位。
             async with _llm_semaphore:
                 response = await litellm.acompletion(**kwargs, timeout=120)
