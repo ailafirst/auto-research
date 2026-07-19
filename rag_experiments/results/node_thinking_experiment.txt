@@ -1,0 +1,24 @@
+各节点 思维链 on/off 对比  |  模型 mimo-v2.5  |  runs=1
+
+节点             思维链       质量ok   输出avg   输出max   思维avg    延迟s  质量备注
+------------------------------------------------------------------
+planner        关         100%     659     659       0   10.2  4 个子问题, goal=有
+planner        开         100%    1784    1784    1085   30.7  4 个子问题, goal=有
+analyst        关         100%     155     155       0    3.3  答164字, 引用['C01', 'C03']
+analyst        开         100%    1749    1749    1599   26.7  答154字, 引用['C01', 'C03']
+fact_checker   关         100%     739     739       0   11.3  passed=False, 召回 5/5, issues=5
+fact_checker   开           0%    1525    1525     794   22.3  JSON坏/截断
+report_draft   关         100%    1160    1160       0   19.3  1903字, 7处引用, 5节标题
+report_draft   开         100%    2023    2023     733   33.6  2057字, 7处引用, 5节标题
+report_revise  关         100%     233     233       0    3.3  343字, 残留错误数字['8000'], 标注=有
+report_revise  开         100%    1814    1814    1102   29.4  1162字, 残留错误数字无, 标注=有
+
+建议 max_tokens（关思维链下 实测输出max × 2 冗余，向上取整 512，下限 1024）：
+  planner         实测输出max   659  →  建议 max_tokens = 1536
+  analyst         实测输出max   155  →  建议 max_tokens = 1024
+  fact_checker    实测输出max   739  →  建议 max_tokens = 1536
+  report_draft    实测输出max  1160  →  建议 max_tokens = 2560
+  report_revise   实测输出max   233  →  建议 max_tokens = 1024
+
+读法：思维avg=reasoning_tokens（关思维链应为 0）；质量ok 若开关差不多 → 可安全关思维链省 token 并恢复温度；若关了质量掉 → 保留思维链。
+冗余：max_tokens 不卡实测刚好，留 2× 余量防长尾输出被截断（detect 曾因卡太紧截断）。

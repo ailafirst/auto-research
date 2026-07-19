@@ -17,6 +17,18 @@ from app.services.cache_service import get_cache
 
 logger = logging.getLogger(__name__)
 
+# 方案①：静态学术白名单域（Tavily include_domains 用）。命中不命中交给 reranker 自过滤，
+# 不做问题类型判断。详见 docs/证据信源质量改进方案.md。
+ACADEMIC_ALLOWLIST: list[str] = [
+    "arxiv.org", "biorxiv.org", "medrxiv.org", "ncbi.nlm.nih.gov",
+    "pubmed.ncbi.nlm.nih.gov", "pmc.ncbi.nlm.nih.gov", "nature.com",
+    "science.org", "sciencedirect.com", "springer.com", "link.springer.com",
+    "ieee.org", "ieeexplore.ieee.org", "acm.org", "dl.acm.org", "cell.com",
+    "pnas.org", "frontiersin.org", "mdpi.com", "plos.org", "elifesciences.org",
+    "jstor.org", "onlinelibrary.wiley.com", "tandfonline.com", "sagepub.com",
+    "semanticscholar.org", "aps.org", "iop.org", "rsc.org", "acs.org", "oup.com",
+]
+
 
 class TavilyRateLimitError(Exception):
     """Tavily 限速错误（429）— 可被 tenacity 捕获并按指数退避重试。"""
@@ -90,14 +102,17 @@ def _get_key_pool() -> TavilyKeyPool:
 class BaseSearchProvider:
     """搜索提供者基类。"""
 
-    async def search(self, query: str, max_results: int = 5) -> list[SearchResult]:
+    async def search(self, query: str, max_results: int = 5,
+                     include_domains: list[str] | None = None) -> list[SearchResult]:
         raise NotImplementedError
 
 
 class DuckDuckGoProvider(BaseSearchProvider):
     """DuckDuckGo 搜索（免费，适合开发环境）。"""
 
-    async def search(self, query: str, max_results: int = 5) -> list[SearchResult]:
+    async def search(self, query: str, max_results: int = 5,
+                     include_domains: list[str] | None = None) -> list[SearchResult]:
+        # DuckDuckGo 无域名过滤参数，include_domains 忽略（学术双路仅 Tavily 生效）
         try:
             from ddgs import DDGS
 
@@ -141,7 +156,8 @@ _tavily_semaphore = asyncio.Semaphore(3)   # 限制 Tavily 全局并发，避免
 class TavilyProvider(BaseSearchProvider):
     """Tavily Search API 搜索，支持多 key 顺序轮换。"""
 
-    async def search(self, query: str, max_results: int = 5) -> list[SearchResult]:
+    async def search(self, query: str, max_results: int = 5,
+                     include_domains: list[str] | None = None) -> list[SearchResult]:
         pool = _get_key_pool()
         # 在进入 semaphore 前记录本次请求使用的 key index，随错误一起传出
         # 这样多个并发任务失败时，rotate(key_idx) 都用同一个 from_idx，
@@ -157,13 +173,16 @@ class TavilyProvider(BaseSearchProvider):
                 from tavily import AsyncTavilyClient
 
                 client = AsyncTavilyClient(api_key=api_key)
-                response = await client.search(
+                search_kwargs: dict[str, Any] = dict(
                     query=query,
                     max_results=max_results,
                     search_depth=settings.tavily_search_depth,
                     include_raw_content=settings.tavily_include_raw_content,
                     include_answer=True,
                 )
+                if include_domains:
+                    search_kwargs["include_domains"] = include_domains
+                response = await client.search(**search_kwargs)
 
                 answer: str | None = response.get("answer") or None
 
@@ -222,11 +241,14 @@ class SearchService:
         retry=retry_if_exception_type(TavilyRateLimitError),
         reraise=True,
     )
-    async def _primary_search(self, query: str, max_results: int) -> list[SearchResult]:
+    async def _primary_search(self, query: str, max_results: int,
+                              include_domains: list[str] | None = None) -> list[SearchResult]:
         """调用主引擎，限速时由 tenacity 按指数退避自动重试（最多 3 次）。"""
-        return await self.provider.search(query, max_results=max_results)
+        return await self.provider.search(query, max_results=max_results,
+                                          include_domains=include_domains)
 
-    async def search(self, query: str, max_results: int | None = None) -> list[SearchResult]:
+    async def search(self, query: str, max_results: int | None = None,
+                     include_domains: list[str] | None = None) -> list[SearchResult]:
         """执行单次搜索，限速时重试，额度耗尽时轮换 key，最终失败降级 DuckDuckGo。
 
         命中缓存时直接返回，完全跳过 Tavily（省配额）。缓存 key 含 provider 与影响返回体
@@ -243,6 +265,7 @@ class SearchService:
             n_results,
             settings.tavily_search_depth,
             settings.tavily_include_raw_content,
+            ",".join(include_domains) if include_domains else "",  # 学术双路与通用搜索缓存分离
         )
         cached = await cache.get_json(cache_key)
         if cached is not None:
@@ -259,7 +282,7 @@ class SearchService:
         max_key_attempts = len(pool._keys) + 1
         for _ in range(max_key_attempts):
             try:
-                results = await self._primary_search(query, n_results)
+                results = await self._primary_search(query, n_results, include_domains)
                 break
             except TavilyRateLimitError:
                 logger.warning("Tavily 限速重试耗尽，降级 DDG: query='%s'", query[:50])
@@ -289,6 +312,42 @@ class SearchService:
                 settings.search_cache_ttl,
             )
         return results
+
+    async def search_academic_dual(
+        self, query: str, max_results: int | None = None,
+    ) -> list[SearchResult]:
+        """方案①：通用一路 + 学术白名单一路，并发检索后按 URL 去重合并（通用优先）。
+
+        统一生效、不猜问题类型——命中不命中交给下游 reranker 自过滤。降级安全：
+        非 Tavily 引擎或学术路失败/为空时，退回通用结果。详见
+        docs/证据信源质量改进方案.md。
+        """
+        # 学术域名过滤是 Tavily 特性；DDG 路直接走通用搜索
+        if self._current_provider != "tavily":
+            return await self.search(query, max_results=max_results)
+
+        general, academic = await asyncio.gather(
+            self.search(query, max_results=max_results),
+            self.search(query, max_results=max_results, include_domains=ACADEMIC_ALLOWLIST),
+            return_exceptions=True,
+        )
+        if isinstance(general, Exception):
+            logger.warning("学术双路：通用路异常，退回学术路: %s", general)
+            return [] if isinstance(academic, Exception) else list(academic)
+        merged = list(general)
+        if isinstance(academic, Exception):
+            logger.warning("学术双路：学术路异常，仅用通用结果: %s", academic)
+            return merged
+
+        seen = {r.url for r in merged}
+        added = 0
+        for r in academic:
+            if r.url not in seen:
+                seen.add(r.url)
+                merged.append(r)
+                added += 1
+        logger.info("学术双路 [%s]: 通用 %d + 学术新增 %d", query[:40], len(general), added)
+        return merged
 
     async def probe_key_pool(self) -> None:
         """发 1 次轻量探针确认当前 Tavily key 可用；quota 耗尽则提前 rotate。

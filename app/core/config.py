@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # 爬虫补抓（爬虫有 30s 超时，稳健）。配额紧张/基准测试时可降级为 basic。
     tavily_search_depth: Literal["basic", "advanced"] = "advanced"
     tavily_include_raw_content: bool = True
+    # 学术源双路（方案①）：每次查询在通用搜索外，再并发一路限定学术白名单域的 Tavily
+    # 检索并合并，让研究/综述源进入候选池；相关性交给 reranker 自过滤（统一生效，不猜
+    # 问题类型）。仅 Tavily 路生效。详见 docs/证据信源质量改进方案.md。
+    academic_search_enabled: bool = True
 
     # --- Qdrant ---
     qdrant_url: str = "http://localhost:6333"

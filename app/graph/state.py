@@ -50,6 +50,10 @@ class ResearchState(TypedDict):
     fact_check_result: dict[str, Any]
     fact_check_passed: bool
     follow_up_queries: list[str]
+    # 增量补证（方案②）：核查未通过（严重问题）的子问题 id，及各自的补充检索 query。
+    # 多轮补证只针对这些子问题，其余复用；failed 集为空即收敛停止。
+    failed_sub_questions: list[str]
+    follow_up_by_sq: dict[str, list[str]]
     # citation_mismatch 引用修正（fact_checker → analyst retry）
     citation_mismatches: list[dict[str, Any]]   # [{sub_question_id, issues}]
     analyst_revision_done: bool

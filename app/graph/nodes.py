@@ -14,6 +14,7 @@
 import asyncio
 import json
 import logging
+import re
 from typing import Any
 
 from app.core.config import settings
@@ -44,16 +45,17 @@ _INTENT_GUIDE: dict[str, str] = {
 
 _REPORT_TYPE_GUIDE: dict[str, str] = {
     "summary": (
-        "报告类型=summary（快速摘要）：控制在 600 字以内，"
-        "仅包含「标题 → 执行摘要（3–5 条要点）→ 核心结论 → 参考来源」，不展开子问题章节。"
+        "报告类型=summary（快速摘要）：控制在 600 字以内，篇幅侧重结论。"
+        "标题 → 3–5 条要点式核心结论 → 参考来源；要点提炼成判断，不逐题复述。"
     ),
     "comparison": (
         "报告类型=comparison（对比分析）：必须包含 Markdown 对比表格（各维度 × 各对象），"
-        "随后展开各维度差异分析，最后给出综合建议。"
+        "随后**按关键差异主题**展开分析（非按对象或子问题罗列），最后给出综合建议。"
     ),
     "deep": (
-        "报告类型=deep（深度报告）：完整七节结构——"
-        "标题 → 摘要 → 研究问题说明 → 核心结论 → 分析（各子问题独立成节）→ 风险与不确定性 → 参考来源。"
+        "报告类型=deep（深度报告）：充分展开、引用具体证据。"
+        "标题 → 摘要 → 正文（**围绕中心论点、按主题自由分节**，非按子问题逐节）→ 风险与不确定性 → 参考来源；"
+        "正文小节数量与标题由内容决定，不设固定节数。"
     ),
 }
 
@@ -109,6 +111,37 @@ _FACT_CHECKER_RESPONSE_FORMAT: dict = {
                 "follow_up_queries": {"type": "array", "items": {"type": "string"}},
             },
             "required": ["passed", "issues", "follow_up_queries"],
+            "additionalProperties": False,
+        },
+    },
+}
+
+# CoVe 报告核对：只产出「一一对应的结构化问题清单」（不重写报告），把这次调用的输出
+# 压到最小——每条 = 问题原句 quote + 类型 issue + 依据证据的修正建议 fix。修订交给后续
+# 的 report_writer 重写 pass 依此清单执行（方案丙）。
+_COVE_PROBLEMS_RESPONSE_FORMAT: dict = {
+    "type": "json_schema",
+    "json_schema": {
+        "name": "report_problems",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "problems": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "quote": {"type": "string"},
+                            "issue": {"type": "string", "enum": ["conflict", "unsourced", "overclaim", "citation_mismatch"]},
+                            "fix":   {"type": "string"},
+                        },
+                        "required": ["quote", "issue", "fix"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["problems"],
             "additionalProperties": False,
         },
     },
@@ -276,17 +309,13 @@ def _read_prompt(name: str) -> str:
             '}'
         ),
         "report_writer": (
-            "你是一个专业的研究报告撰写专家。请基于研究计划、分析结果"
-            "和引用来源，生成一份结构化的 Markdown 研究报告。\n\n"
-            "报告结构：\n"
-            "1. 标题\n"
-            "2. 摘要\n"
-            "3. 研究问题说明\n"
-            "4. 核心结论\n"
-            "5. 分章节分析（对应各个子问题）\n"
-            "6. 风险与不确定性\n"
-            "7. 参考来源列表\n\n"
-            "请使用清晰的 Markdown 格式。在每部分标注引用编号，如 [S1]。"
+            "你是专业研究报告撰写专家。基于分析素材写一篇**有中心论点、结构自然的 Markdown 分析文章**，"
+            "不要把各子问题的答案分节裱起来。\n\n"
+            "- 围绕中心论点组织，**按主题而非按子问题分节**：子问题分析是证据素材，"
+            "把跨子问题的相关证据合并到同一主题下论述，严禁逐题罗列。\n"
+            "- 小节标题反映观点/主题，不照抄子问题原文；段落间有逻辑推进。\n"
+            "- 结论基于分析素材，不引入分析外信息；不确定处用 *斜体*、关键结论加粗。\n"
+            "- 行内引用用参考来源的 ID（如 [C01]），不得编造列表外编号；参考来源列表放最后。"
         ),
     }
     return defaults.get(name, "")
@@ -344,7 +373,7 @@ async def planner_node(state: ResearchState) -> dict[str, Any]:
 
     content = await _llm_with_short_retry(
         llm, messages, "planner", _SHORT_THRESHOLDS["planner"],
-        temperature=0.3,
+        temperature=0.3, thinking=False, max_tokens=2048,
         response_format={"type": "json_object"},
     )
     plan = json.loads(content)
@@ -406,7 +435,13 @@ async def retriever_node(state: ResearchState) -> dict[str, Any]:
             ]
 
         async def _search_tagged(query: str, sq_id: str) -> list[dict[str, Any]]:
-            results = await search_service.search(query, max_results=settings.max_search_results)
+            # 方案①：学术双路（通用 + 学术白名单并发合并），相关性交给 reranker 自过滤
+            if settings.academic_search_enabled:
+                results = await search_service.search_academic_dual(
+                    query, max_results=settings.max_search_results)
+            else:
+                results = await search_service.search(
+                    query, max_results=settings.max_search_results)
             return [{**r.model_dump(), "sub_question_id": sq_id} for r in results]
 
         batches = await asyncio.gather(
@@ -598,6 +633,136 @@ async def evidence_builder_node(state: ResearchState) -> dict[str, Any]:
         }
 
 
+# 内联引用标记：[C??]（占位/无源）或 [C01]/[C1]（可能含未登记编号）
+_CID_TOKEN_RE = re.compile(r"\[C(\?\?|\d{1,3})\]")
+
+
+def _enforce_citation_discipline(
+    answer: str,
+    citations: list[str],
+    confidence: float,
+    valid_cids: set[str],
+) -> tuple[str, list[str], float, bool, int]:
+    """无源引用纪律（1b）：把答案里指向不存在来源的引用标记（[C??] 或 Citation
+    Registry 之外的 [Cxx]）替换为「（存疑·证据不足）」，并显著下调置信度——避免把
+    参数知识当证据以肯定句写入结论。有效引用统一规范化为 [C01] 两位数格式。
+
+    返回：(清洗后 answer, 过滤后 citations, 调整后 confidence, evidence_gap, 命中数)
+    """
+    bad = 0
+
+    def _sub(m: "re.Match[str]") -> str:
+        nonlocal bad
+        raw = m.group(1)
+        if raw == "??":
+            bad += 1
+            return "（存疑·证据不足）"
+        cid = f"C{int(raw):02d}"
+        if cid not in valid_cids:
+            bad += 1
+            return "（存疑·证据不足）"
+        return f"[{cid}]"
+
+    cleaned = _CID_TOKEN_RE.sub(_sub, answer)
+
+    # 引用列表：规范化、过滤 registry 之外的 id、去重保序
+    filtered: list[str] = []
+    for c in citations:
+        mm = re.fullmatch(r"C?(\d{1,3})", str(c).strip())
+        cid = f"C{int(mm.group(1)):02d}" if mm else str(c).strip()
+        if cid in valid_cids and cid not in filtered:
+            filtered.append(cid)
+
+    if bad > 0:
+        confidence = round(min(confidence, 0.4), 2)
+    evidence_gap = bad > 0 or not filtered
+    return cleaned, filtered, confidence, evidence_gap, bad
+
+
+def _sanitize_report_citations(report: str, valid_cids: set[str]) -> tuple[str, int]:
+    """报告级引用清洗（代码兜底 / CoVe 第 2 步）：把最终报告里的 [C??] 或 Citation
+    Registry 之外的 [Cxx] 一律替换为「（存疑·证据不足）」，保证渲染出的报告绝不残留
+    占位/无效引用。与 analyst 的 _enforce_citation_discipline 同源，但只清洗正文。
+
+    返回：(清洗后报告, 命中数)
+    """
+    bad = 0
+
+    def _sub(m: "re.Match[str]") -> str:
+        nonlocal bad
+        raw = m.group(1)
+        if raw == "??":
+            bad += 1
+            return "（存疑·证据不足）"
+        cid = f"C{int(raw):02d}"
+        if cid not in valid_cids:
+            bad += 1
+            return "（存疑·证据不足）"
+        return f"[{cid}]"
+
+    return _CID_TOKEN_RE.sub(_sub, report), bad
+
+
+# CoVe 核对调用的成本参数（方案丙的"多的一次调用"，重点压到最低）：
+# 关闭思维链（推理 token 归零，是这次调用最大的省 token 杠杆）、限制最大输出。
+# 最优取值由 rag_experiments/cove_verify_experiment.py 对比实验确定后回填此处。
+_COVE_DETECT_THINKING: bool = False
+_COVE_DETECT_MAX_TOKENS: int = 1024
+
+
+async def _cove_detect_problems(
+    llm: Any,
+    report: str,
+    query: str,
+    research_goal: str,
+    citation_registry: list[dict[str, Any]],
+    crawled_docs: list[dict[str, Any]],
+    evaluated: list[dict[str, Any]],
+    sources_text: str,
+) -> list[dict[str, Any]]:
+    """CoVe 核对（方案丙，默认每篇全开）：拿真实证据逐条核对报告里"无引用的具体断言"，
+    只产出「一一对应的结构化问题清单」[{quote, issue, fix}]——不重写报告，这次调用的输出
+    压到最小（关思维链 + 限 max_tokens）。修订由后续 report_writer 重写 pass 依此清单执行。
+    任何异常/坏 JSON 都返回空清单（降级安全：不触发重写，直接用初稿）。
+    """
+    import json as _json
+
+    url_to_cid = {c["url"]: c["id"] for c in citation_registry}
+    accepted_urls = {e["url"] for e in evaluated if e.get("accepted")}
+    ev_parts: list[str] = []
+    for doc in crawled_docs:
+        url = doc.get("url", "")
+        cid = url_to_cid.get(url)
+        content = (doc.get("content") or "")[:800]
+        if cid and url in accepted_urls and content:
+            ev_parts.append(f"[{cid}] {doc.get('title', url)}\n{content}")
+        if len(ev_parts) >= 15:   # 封顶证据条数，约束输入成本
+            break
+    evidence_text = "\n\n---\n\n".join(ev_parts) if ev_parts else "（无可用证据正文）"
+
+    detect_user = (
+        f"研究问题: {query}\n"
+        f"研究目标: {research_goal}\n\n"
+        f"## Citation Registry（唯一合法引用编号）\n{sources_text}\n\n"
+        f"## 可用证据正文（逐条核对依据）\n{evidence_text}\n\n"
+        f"## 报告初稿（在其中定位有问题的具体断言）\n{report}\n\n"
+        f"只挑出有问题的具体断言，每条给出 quote / issue / fix（严格 JSON）；无问题返回空列表。"
+    )
+    try:
+        out = await llm.chat(
+            [{"role": "system", "content": _read_prompt("report_verifier")},
+             {"role": "user", "content": detect_user}],
+            temperature=0.1,
+            max_tokens=_COVE_DETECT_MAX_TOKENS,
+            thinking=_COVE_DETECT_THINKING,
+            response_format=_COVE_PROBLEMS_RESPONSE_FORMAT,
+        )
+        return _json.loads(out).get("problems", [])[:12]
+    except Exception as exc:
+        logger.warning("Report CoVe 问题检出失败，跳过修订、沿用初稿: %s", exc)
+        return []
+
+
 async def _analyze_single_question(
     sq: dict[str, Any],
     shared_system_content: str,
@@ -605,6 +770,7 @@ async def _analyze_single_question(
     search_summaries: list[dict[str, Any]] | None = None,
     research_strategy: dict[str, Any] | None = None,
     mismatch_feedback: str = "",
+    valid_cids: set[str] | None = None,
 ) -> dict[str, Any]:
     """分析单个子问题（可并发调用）。
 
@@ -663,7 +829,7 @@ async def _analyze_single_question(
     llm = LLMService()
     result_str = await _llm_with_short_retry(
         llm, messages, "analyst", _SHORT_THRESHOLDS["analyst"],
-        temperature=0.3,
+        temperature=0.3, thinking=False, max_tokens=2048,
         response_format=_ANALYST_RESPONSE_FORMAT,
     )
 
@@ -675,13 +841,30 @@ async def _analyze_single_question(
             raise ValueError(f"LLM 返回格式无法解析 [{qid}]: {result_str[:200]}")
         result = json_mod.loads(match.group(1))
 
+    answer       = result.get("answer", "")
+    citations    = result.get("citations", top_cids[:3])
+    confidence   = round(result.get("confidence", 0.5), 2)
+    evidence_gap = result.get("evidence_gap", not bool(top_cids))
+
+    # 无源引用纪律（1b）：清理 [C??]/registry 之外的引用并下调置信度
+    if valid_cids is not None:
+        answer, citations, confidence, disc_gap, bad = _enforce_citation_discipline(
+            answer, citations, confidence, valid_cids,
+        )
+        evidence_gap = evidence_gap or disc_gap
+        if bad:
+            logger.warning(
+                "Analyst 无源引用纪律 [%s]: 清理 %d 处占位/无效引用，置信度下调至 %.2f",
+                qid, bad, confidence,
+            )
+
     return {
         "sub_question_id": qid,
         "question": question,
-        "answer": result.get("answer", ""),
-        "citations": result.get("citations", top_cids[:3]),
-        "confidence": round(result.get("confidence", 0.5), 2),
-        "evidence_gap": result.get("evidence_gap", not bool(top_cids)),
+        "answer": answer,
+        "citations": citations,
+        "confidence": confidence,
+        "evidence_gap": evidence_gap,
     }
 
 
@@ -728,10 +911,17 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     except Exception:
         qdrant_ok = False
 
-    # 构建全局 Citation Registry（每篇通过评估的来源分配唯一稳定 ID）
-    citation_registry: list[dict[str, str]] = []
-    url_to_cid: dict[str, str] = {}
-    _cid_n = 1
+    # 构建全局 Citation Registry（每篇通过评估的来源分配唯一稳定 ID）。
+    # 增量补证（方案②）时，上一轮的 registry 会经 state 携带进来；这里在其基础上
+    # 「追加」本轮新来源，绝不重号——保证 CID 跨轮全局稳定，复用的旧轮答案里的
+    # [C0x] 仍然指向同一来源。首轮 / 单轮时 prior 为空，行为与原来完全一致。
+    prior_registry = state.get("citation_registry", []) or []
+    citation_registry: list[dict[str, str]] = [dict(c) for c in prior_registry]
+    url_to_cid: dict[str, str] = {c["url"]: c["id"] for c in citation_registry}
+    _cid_n = 1 + max(
+        (int(str(c["id"]).lstrip("C")) for c in citation_registry if str(c["id"]).lstrip("C").isdigit()),
+        default=0,
+    )
     for doc in accepted_docs:
         url = doc.get("url", "")
         if url and url not in url_to_cid:
@@ -788,11 +978,29 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
         logger.info("共享 RAG 池: %d 条 chunk（来自 %d 个子问题查询）", len(shared_chunks), len(sub_questions))
 
     # ── 构建共享证据文本（Part 2）：无 RAG 时回退到原始文档 ───────────────────
+    # 任何进入证据文本的来源都必须有稳定 CID（1a）。多轮补充研究时向量库按 task_id
+    # 跨轮累积，检索会命中往轮已入库、但不在本轮 accepted_docs 的 chunk；若直接写
+    # [C??]，analyst 会照抄这个无源标签。这里给未登记来源补登 Citation Registry，
+    # 保证"凡是给 analyst 看的来源都可被引用"，从源头杜绝 [C??] 进入证据。
+    _auto_registered = 0
+
+    def _ensure_cid(url: str, title: str) -> str:
+        nonlocal _cid_n, _auto_registered
+        cid = url_to_cid.get(url)
+        if cid:
+            return cid
+        cid = f"C{_cid_n:02d}"
+        url_to_cid[url] = cid
+        citation_registry.append({"id": cid, "title": title or url, "url": url})
+        _cid_n += 1
+        _auto_registered += 1
+        return cid
+
     evidence_parts: list[str] = []
     if shared_chunks:
         for chunk in shared_chunks:
             url   = chunk.get("url", "")
-            cid   = url_to_cid.get(url, "C??")
+            cid   = _ensure_cid(url, chunk.get("title", "来源"))
             text  = chunk.get("text", "")[:800]
             score = chunk.get("score", 0)
             evidence_parts.append(
@@ -801,15 +1009,21 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
             )
     else:
         for doc in accepted_docs:
-            url     = doc.get("url", "")
-            cid     = url_to_cid.get(url, "C??")
             content = doc.get("content", "")[:1000]
-            if content:
-                evidence_parts.append(
-                    f"[{cid}] {doc.get('title', '来源')}\nURL: {url}\n{content}"
-                )
+            if not content:
+                continue
+            url = doc.get("url", "")
+            cid = _ensure_cid(url, doc.get("title", "来源"))
+            evidence_parts.append(
+                f"[{cid}] {doc.get('title', '来源')}\nURL: {url}\n{content}"
+            )
 
     evidence_text = "\n\n---\n\n".join(evidence_parts) if evidence_parts else "无可用来源。"
+    if _auto_registered:
+        logger.info(
+            "Analyst 证据补登记 %d 条跨轮来源到 Citation Registry（避免 [C??]）",
+            _auto_registered,
+        )
 
     # ── 构建共享 system message（Part 1 + Part 2）────────────────────────────
     # Part 1：系统规则（analyst prompt）
@@ -845,6 +1059,9 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
         f"{evidence_text}"
     )
 
+    # 合法引用 id 集合（含 1a 补登记的跨轮来源），用于 analyst 输出的无源引用纪律
+    valid_cids = {c["id"] for c in citation_registry}
+
     # 最多同时发起 _ANALYST_LLM_CONCURRENCY 个 LLM 并发调用，避免触发 API 限速
     sem = asyncio.Semaphore(_ANALYST_LLM_CONCURRENCY)
 
@@ -868,6 +1085,7 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
                 search_summaries=search_summaries,
                 research_strategy=research_strategy,
                 mismatch_feedback=mismatch_map.get(qid, ""),
+                valid_cids=valid_cids,
             )
 
     # 所有子问题并发执行，return_exceptions=True 保证单个失败不影响其他结果
@@ -912,6 +1130,7 @@ async def _check_single_answer(
     prompt: str,
     sem: asyncio.Semaphore,
     citation_registry: list[dict[str, str]] | None = None,
+    research_goal: str = "",
 ) -> dict[str, Any]:
     """对单个子问题答案进行事实核查（可并发调用）。"""
     import json as json_mod
@@ -944,9 +1163,15 @@ async def _check_single_answer(
                 )
         source_text = "\n\n".join(source_parts) if source_parts else "（无可用来源）"
 
+        goal_block = (
+            f"【研究总目标】{research_goal}\n"
+            f"（当前子问题只是回答该总目标的一个侧面，正常的局部回答不算跑题）\n\n"
+            if research_goal else ""
+        )
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": (
+                f"{goal_block}"
                 f"子问题: {question}\n"
                 f"置信度: {confidence:.0%}  引用: {', '.join(citations) or '无'}\n\n"
                 f"分析结果:\n{answer}\n\n"
@@ -956,7 +1181,7 @@ async def _check_single_answer(
         ]
         result_str = await _llm_with_short_retry(
             llm, messages, "fact_checker", _SHORT_THRESHOLDS["fact_checker"],
-            temperature=0.1,
+            temperature=0.1, thinking=False, max_tokens=2048,
             response_format=_FACT_CHECKER_RESPONSE_FORMAT,
         )
 
@@ -995,6 +1220,8 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
             "fact_check_passed":  True,
             "follow_up_queries":  [],
             "citation_mismatches": [],
+            "failed_sub_questions": [],
+            "follow_up_by_sq":    {},
             "progress":           85,
             "progress_message":   "无子问题，跳过事实核查",
         }
@@ -1007,8 +1234,9 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
     sem    = asyncio.Semaphore(settings.fact_checker_concurrency)
 
     citation_registry = state.get("citation_registry", [])
+    research_goal = (state.get("research_plan", {}) or {}).get("research_goal") or state.get("query", "")
     check_results = await asyncio.gather(
-        *[_check_single_answer(sa, accepted_docs, llm, prompt, sem, citation_registry)
+        *[_check_single_answer(sa, accepted_docs, llm, prompt, sem, citation_registry, research_goal)
           for sa in sub_answers],
         return_exceptions=True,
     )
@@ -1020,6 +1248,10 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
     all_follow_ups:       list[str]            = []
     seen_follow_ups:      set[str]             = set()
     citation_mismatches:  list[dict[str, Any]] = []
+    # 增量补证（方案②）：记录每个未通过（严重问题）的子问题 id 及其定向补充 query，
+    # 供 research_runner 只重做这些子问题、其余复用。
+    failed_sub_questions: list[str]            = []
+    follow_up_by_sq:      dict[str, list[str]] = {}
     any_failed = False
 
     for cr in check_results:
@@ -1029,16 +1261,24 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
 
         issues = cr.get("issues", [])
         sq_id  = cr.get("sub_question_id", "")
+        sq_follow_ups = cr.get("follow_up_queries", [])
 
         if any(i.get("type") in _SERIOUS_ISSUE_TYPES for i in issues):
             any_failed = True
+            if sq_id and sq_id not in failed_sub_questions:
+                failed_sub_questions.append(sq_id)
+            if sq_id and sq_follow_ups:
+                bucket = follow_up_by_sq.setdefault(sq_id, [])
+                for fq in sq_follow_ups:
+                    if fq not in bucket:
+                        bucket.append(fq)
 
         cm_issues = [i for i in issues if i.get("type") == "citation_mismatch"]
         if cm_issues:
             citation_mismatches.append({"sub_question_id": sq_id, "issues": cm_issues})
 
         all_issues.extend(issues)
-        for fq in cr.get("follow_up_queries", []):
+        for fq in sq_follow_ups:
             if fq not in seen_follow_ups:
                 seen_follow_ups.add(fq)
                 all_follow_ups.append(fq)
@@ -1070,6 +1310,8 @@ async def fact_checker_node(state: ResearchState) -> dict[str, Any]:
         "fact_check_passed":  fact_check_result["passed"],
         "follow_up_queries":  all_follow_ups[:5],
         "citation_mismatches": citation_mismatches,
+        "failed_sub_questions": failed_sub_questions,
+        "follow_up_by_sq":    follow_up_by_sq,
         "progress":           85,
         "progress_message":   progress_message,
     }
@@ -1097,11 +1339,11 @@ async def report_writer_node(state: ResearchState) -> dict[str, Any]:
     report_type_guide = _REPORT_TYPE_GUIDE.get(report_type, _REPORT_TYPE_GUIDE["deep"])
 
     sub_answers_text = "\n\n".join([
-        f"### {a.get('question', '')}\n"
+        f"素材 {idx}（子问题：{a.get('question', '')}）\n"
         f"置信度: {a.get('confidence', 0):.0%}\n"
-        f"回答: {a.get('answer', '')}\n"
-        f"引用: {', '.join(a.get('citations', []))}"
-        for a in sub_answers
+        f"结论: {a.get('answer', '')}\n"
+        f"可用引用: {', '.join(a.get('citations', []))}"
+        for idx, a in enumerate(sub_answers, 1)
     ])
 
     citation_registry = state.get("citation_registry", [])
@@ -1126,17 +1368,23 @@ async def report_writer_node(state: ResearchState) -> dict[str, Any]:
         for i in issues
     ]) if issues else "无"
 
+    research_goal = research_plan.get("research_goal", query)
     user_message = (
+        f"# 用户要的答案（全文必须正面回应，结论前置）\n"
         f"研究问题: {query}\n"
-        f"研究目标: {research_plan.get('research_goal', query)}\n"
+        f"研究目标: {research_goal}\n\n"
         f"问题意图: {intent}  研究领域: {domain}  研究深度: {depth}\n"
         f"报告类型: {report_type_guide}\n"
         f"研究轮次: {state.get('current_round', 1)}/{state.get('max_rounds', 2)}\n"
         f"通过评估的来源数: {sum(1 for e in evaluated if e.get('accepted'))}/{len(crawled_docs)}\n\n"
-        f"## 各子问题分析结果\n\n{sub_answers_text}\n\n"
+        f"## 分析素材（各子问题的结论与证据，供综合成文；不要照搬为章节，按主题重组）\n\n{sub_answers_text}\n\n"
         f"## 事实核查结果\n{issues_text}\n\n"
         f"## 参考来源\n{sources_text}\n\n"
-        f"请严格按照上方「报告类型」要求生成 Markdown 研究报告。"
+        f"请综合上方素材，围绕「研究目标」提炼出一个贯穿全文的核心判断并**开篇即给出**，"
+        f"再按主题分节（非按子问题逐节）展开支撑，结尾回到用户的原始诉求作结。"
+        f"即使分析素材单薄，也必须正面回答「研究问题」——证据不足之处，基于通用知识给出审慎判断，"
+        f"用斜体显式标注「（基于通用知识的推断，暂无检索证据佐证）」且不附引用号，切勿回避不答。"
+        f"遵循上方「报告类型」的篇幅与结构底线。"
     )
 
     llm = LLMService()
@@ -1150,10 +1398,55 @@ async def report_writer_node(state: ResearchState) -> dict[str, Any]:
         f"report_writer_{report_type}",
         _SHORT_THRESHOLDS["report_writer_deep"],   # 未知类型按最严格标准
     )
+    # reporter（report_writer）保留思维链——报告行文是质量最敏感环节，留推理空间；
+    # 其余节点（planner/analyst/fact_checker/CoVe detect）均已关思维链。
     report = await _llm_with_short_retry(
         llm, messages, "report_writer", rw_threshold,
-        temperature=0.3,
+        temperature=0.45, thinking=True, max_tokens=8192,
     )
+
+    # ── CoVe 核对（方案丙，默认每篇全开）──────────────────────────────────────
+    # 多的这一次调用只做"核对"：输出一一对应的结构化问题清单（关思维链 + 限输出，代价最低）。
+    # 检出问题 → 交给 report_writer 依清单重写一次（修订由 LLM 在上下文里做，不怕匹配失败）；
+    # 无问题 → 直接用初稿，不触发重写。
+    valid_cids = {c["id"] for c in citation_registry}
+    problems = await _cove_detect_problems(
+        llm, report, query, research_goal, citation_registry,
+        crawled_docs, evaluated, sources_text,
+    )
+    if problems:
+        problems_text = "\n".join(
+            f"{i}. 原句：「{p.get('quote', '')}」\n"
+            f"   问题类型：{p.get('issue', '')}\n"
+            f"   修正要求：{p.get('fix', '')}"
+            for i, p in enumerate(problems, 1)
+        )
+        revise_user = (
+            f"# 用户要的答案\n"
+            f"研究问题: {query}\n研究目标: {research_goal}\n\n"
+            f"## 你的报告初稿\n{report}\n\n"
+            f"## 事实核对发现的问题（逐条修正，证据至上，其余保持不变）\n{problems_text}\n\n"
+            f"## 合法引用编号（Citation Registry）\n{sources_text}\n\n"
+            f"请**只**针对上面每条问题做最小修正：与证据冲突的按「修正要求」改；无源具体断言"
+            f"按要求补 [C0x] 或改为 *斜体* 并标注「（基于通用知识的推断，暂无检索证据佐证）」"
+            f"且不加引用号。**其余段落保持初稿原样**，维持中心论点、结构与自然行文，"
+            f"输出完整的修订版 Markdown 报告。"
+        )
+        report = await _llm_with_short_retry(
+            llm,
+            [{"role": "system", "content": prompt},
+             {"role": "user", "content": revise_user}],
+            "report_writer", rw_threshold,
+            temperature=0.4, thinking=True, max_tokens=8192,
+        )
+        logger.info("Report CoVe: 检出 %d 处问题，已依清单重写修订", len(problems))
+    else:
+        logger.info("Report CoVe: 未检出问题，沿用初稿")
+
+    # 代码兜底（硬围栏）：最终报告绝不残留 [C??] / registry 外编号
+    report, bad_refs = _sanitize_report_citations(report, valid_cids)
+    if bad_refs:
+        logger.warning("Report 引用清洗: 剔除 %d 处占位/无效引用编号", bad_refs)
 
     return {
         "final_report": report,

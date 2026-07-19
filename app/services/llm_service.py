@@ -56,8 +56,15 @@ class LLMService:
         temperature: float | None = None,
         max_tokens: int | None = None,
         response_format: dict[str, Any] | None = None,
+        thinking: bool | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> str:
-        """调用 LLM 进行对话。"""
+        """调用 LLM 进行对话。
+
+        thinking：控制 MiMo「深度思考」思维链。None=沿用后端默认（MiMo 默认开启，
+        推理 token 计入输出、按输出计费）；False=显式关闭（结构化抽取类调用用它省
+        token，且关闭后 temperature/top_p 才生效——开启时会被后端强制为 1.0/0.95）。
+        """
         try:
             import litellm
 
@@ -74,6 +81,13 @@ class LLMService:
                 kwargs["api_base"] = self.base_url
             if response_format:
                 kwargs["response_format"] = response_format
+
+            # MiMo 思维链开关经 extra_body 透传到 OpenAI 兼容请求体（{"thinking":{"type":...}}）
+            body: dict[str, Any] = dict(extra_body) if extra_body else {}
+            if thinking is not None:
+                body["thinking"] = {"type": "enabled" if thinking else "disabled"}
+            if body:
+                kwargs["extra_body"] = body
 
             # 分布式全局速率上限（多 worker）：先取 Redis 令牌，令牌等待期间不占本地
             # 并发槽位；Redis 不可用时直接放行，由下方本地信号量兜底（降级安全）。

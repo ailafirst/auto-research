@@ -201,7 +201,7 @@ The `research_goal`, `question`, and `angle` fields should be written in the **s
     "dimensions": ["dimension1", "dimension2"],
     "reasoning": "One sentence explaining the classification decision."
   },
-  "research_goal": "One sentence summarizing the research objective (in user's language).",
+  "research_goal": "The user's core ask in one or two sentences (in user's language): state what they fundamentally want answered. If the question emphasizes evaluation, a recommendation, a comparison verdict, or a specific decision, name that priority explicitly (e.g. '重点是给出 A 与 B 的选型结论，而非罗列各自特性') so downstream analysis and writing lead with it and do not drift into generic background.",
   "question_type": "(compatibility field: trend_analysis | comparison | explanation | solution | deep_analysis)",
   "sub_questions": [
     {

@@ -44,5 +44,8 @@ benchmark/GoldenDataset/golden_set_raw.json
 # API Key 文件
 tavily.txt
 
+# 服务器凭据（含地址/密码，严禁入库）
+aliyun.txt
+
 # Claude Code
 CLAUDE.md

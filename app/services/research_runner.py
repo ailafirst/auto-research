@@ -60,6 +60,18 @@ def _round_summary(round_num: int, state: dict) -> dict:
     }
 
 
+def _merge_by_url(base: list[dict], extra: list[dict]) -> list[dict]:
+    """按 url 取并集合并两份文档/信源列表（base 优先，新 url 追加）。"""
+    seen = {d.get("url") for d in base if d.get("url")}
+    merged = list(base)
+    for d in extra:
+        u = d.get("url")
+        if u and u not in seen:
+            seen.add(u)
+            merged.append(d)
+    return merged
+
+
 async def run_research(task_id: str) -> None:
     """在后台执行研究流程，使用流式获取实时进度。"""
     try:
@@ -184,6 +196,107 @@ async def run_research(task_id: str) -> None:
             rw = await report_writer_node(state)
             return {**state, **rw}
 
+        async def _step(node_func, st: dict, status: str, progress: int, message: str) -> dict:
+            """执行单个节点并推送进度/快照（增量补证中直接编排节点，不走整图）。"""
+            await task_service.update_task(
+                task_id, status=status, progress=progress,
+                progress_message=message, current_round=st.get("current_round", 1),
+            )
+            out = await node_func(st)
+            merged = {**st, **out}
+            await task_service.write_progress_detail(task_id, _progress_snapshot(merged))
+            return merged
+
+        async def _supplement_round(
+            base_state: dict, follow_up_by_sq: dict, failed_ids: list[str], round_num: int,
+        ) -> dict:
+            """增量补证（方案②）：只对核查未通过的子问题重做「检索→分析→核查」，
+            其余子问题复用旧答案；Citation Registry 跨轮追加、CID 稳定；证据向量库按
+            task_id 累积。相比原来的「整图重跑」，避免重复已通过的工作、不回退好答案。
+            """
+            from app.graph.nodes import (
+                analyst_node,
+                content_extractor_node,
+                evidence_builder_node,
+                fact_checker_node,
+                retriever_node,
+                source_evaluator_node,
+            )
+
+            all_sqs = base_state.get("sub_questions", [])
+            failed_sqs: list[dict] = []
+            for sq in all_sqs:
+                if sq.get("id") in failed_ids:
+                    fu = follow_up_by_sq.get(sq.get("id")) or sq.get("search_queries", [])
+                    failed_sqs.append({**sq, "search_queries": fu})
+            if not failed_sqs:
+                return base_state
+
+            flat_queries: list[str] = []
+            for sq in failed_sqs:
+                for q in sq.get("search_queries", []):
+                    if q not in flat_queries:
+                        flat_queries.append(q)
+
+            sub_state = {
+                **base_state,
+                "current_round":      round_num,
+                "sub_questions":      failed_sqs,
+                "search_queries":     flat_queries,
+                "search_results":     [],
+                "search_summaries":   [],
+                "crawled_documents":  [],
+                "evaluated_sources":  [],
+                "evidence_chunks":    [],
+                "citation_mismatches": [],
+                "analyst_revision_done": False,
+                # 关键：带上已建立的 registry，analyst 在其上追加，CID 跨轮不重号
+                "citation_registry":  base_state.get("citation_registry", []),
+            }
+
+            n = len(failed_sqs)
+            sub_state = await _step(retriever_node, sub_state, "retriever", 30,
+                                    f"第 {round_num} 轮定向补充检索（{n} 个待完善子问题）...")
+            sub_state = await _step(content_extractor_node, sub_state, "content_extractor", 42,
+                                    "抓取补充网页...")
+            sub_state = await _step(source_evaluator_node, sub_state, "source_evaluator", 52,
+                                    "评估补充信源...")
+            sub_state = await _step(evidence_builder_node, sub_state, "evidence_builder", 62,
+                                    "补充证据入库...")
+            sub_state = await _step(analyst_node, sub_state, "analyst", 72,
+                                    f"重新分析 {n} 个子问题...")
+            sub_state = await _step(fact_checker_node, sub_state, "fact_checker", 82,
+                                    "复核补充结论...")
+
+            # 合并：失败子问题用新答案覆盖，其余复用旧答案（顺序与原 sub_questions 一致）
+            new_answers = {a.get("sub_question_id"): a for a in sub_state.get("sub_answers", [])}
+            merged_answers = [
+                new_answers.get(a.get("sub_question_id"), a)
+                for a in base_state.get("sub_answers", [])
+            ]
+
+            return {
+                **base_state,
+                "current_round":       round_num,
+                "sub_questions":       all_sqs,
+                "sub_answers":         merged_answers,
+                # analyst 已在旧 registry 上追加，sub_state 的 registry 即并集
+                "citation_registry":   sub_state.get("citation_registry", []),
+                "crawled_documents":   _merge_by_url(base_state.get("crawled_documents", []),
+                                                     sub_state.get("crawled_documents", [])),
+                "evaluated_sources":   _merge_by_url(base_state.get("evaluated_sources", []),
+                                                     sub_state.get("evaluated_sources", [])),
+                # 核查结论取本轮（只覆盖曾失败的子问题）：全通过则收敛，否则携带新的 failed 集
+                "fact_check_result":   sub_state.get("fact_check_result", {}),
+                "fact_check_passed":   sub_state.get("fact_check_passed", True),
+                "follow_up_queries":   sub_state.get("follow_up_queries", []),
+                "follow_up_by_sq":     sub_state.get("follow_up_by_sq", {}),
+                "failed_sub_questions": sub_state.get("failed_sub_questions", []),
+                # 补证轮不再触发引用修正整图重析，交由 analyst 自身的引用纪律兜底
+                "citation_mismatches": [],
+                "analyst_revision_done": True,
+            }
+
         # 轮次历史（供前端轮次时间线，避免多轮时步骤条「清零」的误解）
         rounds_history: list[dict] = []
 
@@ -195,40 +308,43 @@ async def run_research(task_id: str) -> None:
         final_state["rounds_history"] = rounds_history
         await task_service.write_progress_detail(task_id, _progress_snapshot(final_state))
 
-        # 多轮补充研究
+        # 多轮增量补证（方案②）：只重做核查未通过的子问题，通过的复用；
+        # failed 集为空即收敛停止（置信停止），封顶 max_rounds。
         current_round = 1
         while current_round < task.max_rounds:
             if final_state.get("fact_check_passed", True):
                 break
 
-            follow_up = final_state.get("follow_up_queries", [])
-            if not follow_up:
+            failed_ids = final_state.get("failed_sub_questions", [])
+            follow_up_by_sq = final_state.get("follow_up_by_sq", {})
+            if not failed_ids:
                 break
 
             current_round += 1
-
             await task_service.update_task(
                 task_id,
                 status="retrieving",
                 current_round=current_round,
-                progress_message=f"第 {current_round} 轮补充研究...",
+                progress_message=f"第 {current_round} 轮增量补证（{len(failed_ids)} 个子问题）...",
             )
 
-            new_state = _build_state(current_round, {
-                "sub_questions":     final_state.get("sub_questions", []),
-                "research_plan":     final_state.get("research_plan", {}),
-                "research_strategy": final_state.get("research_strategy", {}),
-                "follow_up_queries": follow_up,
-                "search_queries":    follow_up[:5],
-                "search_results":    [],
-                "search_summaries":  [],
-                "crawled_documents": [],
-                "evaluated_sources": [],
-                "rounds_history":    rounds_history,   # 带上已完成轮次，供本轮快照展示
-            })
-            final_state = await _run_round(new_state)
-            final_state = await _revise_citations(final_state)
+            final_state["rounds_history"] = rounds_history   # 供本轮快照展示已完成轮次
+            final_state = await _supplement_round(
+                final_state, follow_up_by_sq, failed_ids, current_round,
+            )
             rounds_history.append(_round_summary(current_round, final_state))
+            final_state["rounds_history"] = rounds_history
+            await task_service.write_progress_detail(task_id, _progress_snapshot(final_state))
+
+        # 若发生过增量补证，基于合并后的完整子答案重写报告（首轮报告已在图内生成）
+        if current_round > 1:
+            from app.graph.nodes import report_writer_node
+            await task_service.update_task(
+                task_id, status="report_writer", progress=92,
+                progress_message="综合各轮结论重写报告...",
+            )
+            rw = await report_writer_node(final_state)
+            final_state = {**final_state, **rw}
             final_state["rounds_history"] = rounds_history
             await task_service.write_progress_detail(task_id, _progress_snapshot(final_state))
 
