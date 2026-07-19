@@ -32,51 +32,115 @@
 | Web 前端 | React 19 + Vite + TypeScript（`web/`）；Streamlit（`ui/`，legacy）|
 | 配置管理 | Pydantic Settings + `.env` |
 
-## 快速开始
+## 快速开始（手把手：从下载到打开 Web UI）
 
-### 1. 环境准备
+> 目标：在本机跑起来，浏览器里提交研究问题、看报告。**最简路线只需 Python + Node.js 两样东西**——不用 Redis、不用 Docker、不用 GPU。命令在 Windows PowerShell / macOS / Linux 通用。
+
+### 0. 前置条件
+
+| 必需 | 说明 |
+|------|------|
+| **Git** | 拉取代码 |
+| **Miniconda / Anaconda**（或任意 Python 3.11）| 后端运行环境 |
+| **Node.js ≥ 20** | 前端（Vite 8）需要，装完自带 `npm` |
+| **一个 LLM API Key** | OpenAI / MiMo / 任意 OpenAI 兼容后端。每个节点都要调 LLM，**没有 key 会在执行时报错**（无规则兜底）|
+
+可选（仅"进阶完整部署"用到）：Docker（起 Redis）、NVIDIA GPU（本地嵌入/重排加速；无 GPU 可改用轻量 CPU 路径，见第 3 步）。
+
+### 1. 下载代码
 
 ```bash
-conda activate deepresearch                 # Python 3.11
+git clone https://github.com/ailafirst/auto-research.git
+cd auto-research
+```
+
+### 2. 后端：建环境 + 装依赖
+
+```bash
+conda create -n deepresearch python=3.11 -y
+conda activate deepresearch
 pip install -r requirements.txt
-cp .env.example .env                         # 编辑 .env，至少填 LLM_API_KEY
+# 可选：想用 `deepresearch "问题"` 命令行入口，再执行一次 pip install -e .
 ```
 
-> 每个节点都调用 LLM，**没有规则兜底**——`LLM_API_KEY` 缺失会在执行时报错。
+> 没有 conda 也行：自备 Python 3.11，`python -m venv .venv` 激活后再 `pip install -r requirements.txt`。
 
-### 2. 单机最简运行（无需 Redis / worker / 模型服务）
-
-`.env` 中令 `QUEUE_ENABLED=false`（或不启 Redis），研究流程在 API 进程内直接执行：
+### 3. 配置 .env（最少改一行）
 
 ```bash
-# API 服务，Swagger 见 /docs
-uvicorn app.main:app --reload --port 8000
-
-# 或 CLI 模式，输出写入 output/<task_id>.md
-python -m app.main "你的研究问题"
-deepresearch "你的研究问题"                   # pyproject.toml 入口点
+cp .env.example .env      # PowerShell 下 cp 同样可用；或 copy .env.example .env
 ```
 
-### 3. 完整部署（多 worker + 模型服务 + React 前端）
+用编辑器打开 `.env`，**至少**填下面几项，其余保持默认：
+
+```ini
+LLM_PROVIDER=openai            # OpenAI 兼容后端都填 openai
+LLM_MODEL=gpt-4o-mini          # 换成你的模型，如 mimo-v2.5
+LLM_API_KEY=sk-...             # ← 必填：你的 key
+LLM_BASE_URL=                  # 仅自建/第三方兼容端点需要，如 https://api.xxx.com/v1
+
+USE_TAVILY=false               # 先用免费 DuckDuckGo（无需搜索 key）；有 Tavily key 再改回 true
+```
+
+> **想零外部依赖直接跑通**：保持 `REDIS_URL=` 为空即可——队列 / 缓存 / 限流会自动禁用并回退进程内执行，无需 Redis、无需另起 worker。
+> **没有 GPU**：把 `EMBEDDING_PROVIDER=st` 改为 `fastembed`，并设 `RERANKER_ENABLED=false`、`XLING_ENABLED=false`，走纯 CPU 轻量路径。
+
+### 4. 前端：装依赖
 
 ```bash
-# ① Redis（队列 / 限流 / 缓存 / 热层进度），.env 设 REDIS_URL=redis://localhost:6379/0
-docker compose up -d redis
+cd web
+npm install
+cd ..
+```
 
-# ② 模型服务（独立进程持有全部模型），.env 设 MODEL_SERVICE_URL=http://localhost:8100
-uvicorn app.model_server:app --host 0.0.0.0 --port 8100
+### 5. 启动 —— 开两个终端，都保持运行
 
-# ③ API 服务
+**终端 ①｜后端 API**
+```bash
+conda activate deepresearch
 uvicorn app.main:app --port 8000
+```
+> 首次启动会预热本地嵌入/重排模型，可能等十几秒到一两分钟；出现 `Application startup complete` 即就绪（Swagger 在 http://localhost:8000/docs ）。
 
-# ④ worker 进程池（QUEUE_ENABLED=true），可在多个终端各起一个横向扩展
-arq app.worker.WorkerSettings
-
-# ⑤ React 前端（dev 由 Vite 代理 /api、/health 到 :8000）
-cd web && npm install && npm run dev          # http://localhost:5173
+**终端 ②｜前端 Web UI**
+```bash
+cd web
+npm run dev
 ```
 
-Streamlit 旧界面仍可用：`streamlit run ui/streamlit_app.py`（http://localhost:8501）。
+### 6. 打开浏览器
+
+访问 **http://localhost:5173** —— 输入研究问题并提交，即可实时看到
+「规划 → 搜索 → 抓取 → 评估 → 证据 → 分析 → 核查 → 报告」的全过程，以及最终带引用来源的报告。
+
+> 前端通过 Vite 把 `/api`、`/health` 代理到 :8000，所以①②两个服务要同时开着。
+
+---
+
+### 进阶：完整部署（多 worker + 模型服务 + Redis）
+
+需要横向扩展，或让多个 worker 共享一份模型省显存时，在 `.env` 里设
+`REDIS_URL=redis://localhost:6379/0`、`MODEL_SERVICE_URL=http://localhost:8100`，
+再按下表各开一个终端（都先 `conda activate deepresearch`）：
+
+| 终端 | 命令 | 作用 |
+|------|------|------|
+| ① Redis | `docker compose up -d redis` | 队列 / 限流 / 缓存 / 热层进度 |
+| ② 模型服务 | `uvicorn app.model_server:app --host 0.0.0.0 --port 8100` | 独立进程持有 embed/rerank/translate，worker 不 import torch |
+| ③ API | `uvicorn app.main:app --port 8000` | 后端接口 |
+| ④ worker（可多开）| `arq app.worker.WorkerSettings` | 从队列领任务执行；多终端各起一个即横向扩展 |
+| ⑤ 前端 | `cd web && npm run dev` | http://localhost:5173 |
+
+> 任一外部依赖（Redis / 模型服务 / 队列）不可用时都会自动回退进程内路径，不中断研究。
+
+### 不想用前端？命令行也能跑
+
+```bash
+python -m app.main "你的研究问题"      # 报告写到 output/<task_id>.md（开箱即用）
+deepresearch "你的研究问题"            # 等价入口，需先 pip install -e .
+```
+
+Streamlit 旧界面（legacy）：`streamlit run ui/streamlit_app.py` → http://localhost:8501 。
 
 ## 项目结构
 
