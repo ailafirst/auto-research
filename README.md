@@ -32,9 +32,9 @@
 | Web 前端 | React 19 + Vite + TypeScript（`web/`）；Streamlit（`ui/`，legacy）|
 | 配置管理 | Pydantic Settings + `.env` |
 
-## 快速开始（手把手：从下载到打开 Web UI）
+## 快速开始（本地 Web UI）
 
-> 目标：在本机跑起来，浏览器里提交研究问题、看报告。**最简路线只需 Python + Node.js 两样东西**——不用 Redis、不用 Docker、不用 GPU。命令在 Windows PowerShell / macOS / Linux 通用。
+目标是在本机启动 Web UI、提交研究问题并查看报告。开发模式只需要 Python 和 Node.js；Windows 完整本地服务模式额外使用 Docker、Redis、模型服务和 Nginx。
 
 ### 0. 前置条件
 
@@ -43,9 +43,9 @@
 | **Git** | 拉取代码 |
 | **Miniconda / Anaconda**（或任意 Python 3.11）| 后端运行环境 |
 | **Node.js ≥ 20** | 前端（Vite 8）需要，装完自带 `npm` |
-| **一个 LLM API Key** | OpenAI / MiMo / 任意 OpenAI 兼容后端。每个节点都要调 LLM，**没有 key 会在执行时报错**（无规则兜底）|
+| **一个 LLM API Key** | OpenAI / MiMo / 任意 OpenAI 兼容后端。每个节点都要调 LLM，没有 key 会在执行时报错 |
 
-可选（仅"进阶完整部署"用到）：Docker（起 Redis）、NVIDIA GPU（本地嵌入/重排加速；无 GPU 可改用轻量 CPU 路径，见第 3 步）。
+可选：Docker Desktop（完整本地服务模式的 Redis）、NVIDIA GPU（本地嵌入/重排加速；无 GPU 可改用轻量 CPU 路径，见第 3 步）。
 
 ### 1. 下载代码
 
@@ -59,6 +59,7 @@ cd auto-research
 ```bash
 conda create -n deepresearch python=3.11 -y
 conda activate deepresearch
+$env:PIP_CACHE_DIR = (Join-Path $PWD "deployment\runtime\package-cache\pip")
 pip install -r requirements.txt
 # 可选：想用 `deepresearch "问题"` 命令行入口，再执行一次 pip install -e .
 ```
@@ -89,11 +90,13 @@ USE_TAVILY=false               # 先用免费 DuckDuckGo（无需搜索 key）�
 
 ```bash
 cd web
-npm install
+npm ci --cache ..\deployment\runtime\package-cache\npm
 cd ..
 ```
 
-### 5. 启动 —— 开两个终端，都保持运行
+### 5. 开发模式启动 Web UI
+
+开发模式需要两个终端，适合代码调试。
 
 **终端 ①｜后端 API**
 ```bash
@@ -115,23 +118,37 @@ npm run dev
 
 > 前端通过 Vite 把 `/api`、`/health` 代理到 :8000，所以①②两个服务要同时开着。
 
+### 7. Windows 完整本地服务启动
+
+需要 Redis、多 worker、独立模型服务和 Nginx 本地入口时，先准备本机运行目录和私有配置：
+
+```powershell
+.\deployment\start-local.ps1 -PrepareOnly
+```
+
+在根目录 `.env` 或 `deployment/runtime/secrets.env` 填写私有配置；将 Nginx Windows 包放入 `deployment/runtime/nginx/`，确保其中有 `nginx.exe` 与 `conf/mime.types`。然后启动：
+
+```powershell
+.\deployment\start-local.ps1 -PythonExe "D:\conda\envs\deepresearch\python.exe"
+```
+
+浏览器访问 `http://127.0.0.1/`。脚本会把模型、包和临时缓存写入被 Git 忽略的 `deployment/runtime/`，避免持续占用 C 盘。
+
+关闭本地服务：
+
+```powershell
+.\deployment\stop-local.ps1
+```
+
+短暂停止 Web UI、但希望下次快速恢复时可保留 Redis：
+
+```powershell
+.\deployment\stop-local.ps1 -KeepRedis
+```
+
+保留 Redis 会继续占用内存和 `6379` 端口，但会保留队列、进度、缓存和限流的热状态。SQLite 才是任务权威存储；当前 Redis 未配置持久卷，不应将其当作长期数据保存。
+
 ---
-
-### 进阶：完整部署（多 worker + 模型服务 + Redis）
-
-需要横向扩展，或让多个 worker 共享一份模型省显存时，在 `.env` 里设
-`REDIS_URL=redis://localhost:6379/0`、`MODEL_SERVICE_URL=http://localhost:8100`，
-再按下表各开一个终端（都先 `conda activate deepresearch`）：
-
-| 终端 | 命令 | 作用 |
-|------|------|------|
-| ① Redis | `docker compose up -d redis` | 队列 / 限流 / 缓存 / 热层进度 |
-| ② 模型服务 | `uvicorn app.model_server:app --host 0.0.0.0 --port 8100` | 独立进程持有 embed/rerank/translate，worker 不 import torch |
-| ③ API | `uvicorn app.main:app --port 8000` | 后端接口 |
-| ④ worker（可多开）| `arq app.worker.WorkerSettings` | 从队列领任务执行；多终端各起一个即横向扩展 |
-| ⑤ 前端 | `cd web && npm run dev` | http://localhost:5173 |
-
-> 任一外部依赖（Redis / 模型服务 / 队列）不可用时都会自动回退进程内路径，不中断研究。
 
 ### 不想用前端？命令行也能跑
 
@@ -178,6 +195,7 @@ deepresearch/
 ├── benchmark/                  # 端到端与逐节点基准
 ├── rag_experiments/            # RAG 检索质量实验
 ├── docs/                       # PRD / 架构 / 各改进方案 / 版本说明
+├── deployment/                 # Windows 本地服务启动与停止脚本
 ├── docker-compose.yml          # Qdrant + Redis
 ├── .env.example
 ├── pyproject.toml

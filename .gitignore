@@ -47,5 +47,15 @@ tavily.txt
 # 服务器凭据（含地址/密码，严禁入库）
 aliyun.txt
 
+# 部署运行时文件：包含 frp 隧道令牌、证书和本机二进制，仅保留在项目工作目录
+deployment/runtime/*
+!deployment/runtime/.gitkeep
+
+# 私有公网隧道操作，仅保留在本机部署目录
+deployment/start-public-tunnel.ps1
+deployment/stop-public-tunnel.ps1
+deployment/verify-frpc.ps1
+deployment/templates/frpc.toml.example
+
 # Claude Code
 CLAUDE.md
