@@ -136,10 +136,14 @@ async def lifespan(app: FastAPI):
     logger.info("Deep Research Agent 关闭")
 
 
+# 单一版本号来源。发版时只改这一处 —— 之前 Swagger 和 `/` 各写死一份，
+# 从 v0.1.0 一路停在 0.1.0 没人发现。与 pyproject.toml 的 version 保持一致。
+APP_VERSION = "0.3.0"
+
 app = FastAPI(
     title="Deep Research Agent",
     description="基于 LangGraph、RAG 与 FastAPI 的自动化深度调研系统",
-    version="0.1.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 
@@ -194,7 +198,7 @@ async def health_check(request: Request) -> HealthResponse:
 async def root():
     return {
         "name": "Deep Research Agent",
-        "version": "0.1.0",
+        "version": APP_VERSION,
         "docs": "/docs",
         "health": "/health",
     }

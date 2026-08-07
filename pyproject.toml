@@ -1,6 +1,6 @@
 [project]
 name = "deep-research-agent"
-version = "0.1.0"
+version = "0.3.0"
 description = "基于 LangGraph、RAG 与 FastAPI 的自动化深度调研系统"
 requires-python = ">=3.11"
 license = {text = "MIT"}

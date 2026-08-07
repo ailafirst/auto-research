@@ -27,6 +27,7 @@
 
 | 版本 | 主线 |
 |---|---|
+| [v0.3.0](version/v0.3.0.md) | 容器化部署 + MySQL/Qdrant 数据层落地 + 凭据与 `/health` 信息暴露收敛 + 文档重组 |
 | [v0.2.1](version/v0.2.1.md) | 多轮增量补证 + 全局目标锚定 + 信源与报告抗幻觉（CoVe）+ 全节点关思维链降本 |
 | [v0.2.0](version/v0.2.0.md) | 多 worker 服务化 + 模型服务化/FP16 + React 前端过程透明 |
 | [v0.1.6](version/v0.1.6.md) | Query Rewriting（HyDE，检索 +1.7pp）|
