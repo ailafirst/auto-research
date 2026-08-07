@@ -1,0 +1,21 @@
+# 模型服务专用依赖 —— 只有跑 app/model_server.py 的那个进程需要
+#
+#     pip install -r requirements-model.txt
+#
+# 为什么单独一份：torch + CUDA 轮子约 2.5GB，而 API/worker 全程走 HTTP 调用模型
+# 服务、不 import torch。把它们混在 requirements.txt 里会让容器镜像凭空多 5GB。
+#
+# CUDA 版本必须与宿主机驱动匹配。本机是 RTX 4080 SUPER / driver 566.03，装的是
+# cu118 轮子，需要指定 PyTorch 官方索引（PyPI 上的默认包不带对应 CUDA 运行时）：
+#
+#     pip install -r requirements-model.txt --extra-index-url https://download.pytorch.org/whl/cu118
+#
+# 纯 CPU 跑（慢一个数量级，但不需要显卡）就用默认 PyPI 源，torch 会装 CPU 版。
+
+-r requirements.txt
+
+torch>=2.7.0
+sentence-transformers>=5.0.0
+transformers>=4.40.0
+# Marian（opus-mt 跨语言翻译）的分词器依赖，缺了 XLING_ENABLED=true 时会加载失败
+sentencepiece>=0.2.0

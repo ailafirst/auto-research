@@ -15,7 +15,7 @@ import json
 import logging
 from typing import Any
 
-from app.core.config import settings
+from app.core.config import mask_dsn, settings
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,11 @@ class CacheService:
         self._enabled = bool(settings.cache_enabled and settings.redis_url)
         self._client: Any | None = None
         self._stats: dict[str, int] = {"hit": 0, "miss": 0, "error": 0}
+        # _enabled 是「按配置该不该用缓存」，构造后不再变；_degraded 是「当前连不上」，
+        # 由 ping() 双向切换。两者分开是因为降级必须可恢复：容器化部署下 Redis 会独立
+        # 重启（restart: unless-stopped）并换 IP，若降级是单向的，长驻的 api/worker
+        # 就会永久放弃缓存直到人工重启——redis-py 本身下一条命令就会自动重连。
+        self._degraded = False
 
         if not self._enabled:
             logger.info("缓存未启用（REDIS_URL 为空或 CACHE_ENABLED=false）")
@@ -42,7 +47,7 @@ class CacheService:
                 socket_connect_timeout=2,
                 socket_timeout=2,
             )
-            logger.info("缓存已启用: %s", settings.redis_url)
+            logger.info("缓存已启用: %s", mask_dsn(settings.redis_url))
         except ImportError:
             logger.warning("redis 未安装，缓存禁用（pip install redis）")
             self._enabled = False
@@ -52,7 +57,7 @@ class CacheService:
 
     @property
     def enabled(self) -> bool:
-        return self._enabled and self._client is not None
+        return self._enabled and self._client is not None and not self._degraded
 
     def key(self, kind: str, *parts: Any) -> str:
         """生成命名空间化的缓存 key。"""
@@ -61,15 +66,25 @@ class CacheService:
         return f"dr:{settings.cache_version}:{kind}:{digest}"
 
     async def ping(self) -> bool:
-        """连通性探测；失败则就地降级为旁路，避免后续每次操作都抛错。"""
-        if not self.enabled:
+        """连通性探测，双向切换降级状态。
+
+        失败时降级为旁路，避免后续每次操作都抛错；恢复时自动解除降级——
+        /health 会周期性调到这里，所以 Redis 重启后无需人工干预即可自愈。
+        """
+        if not self._enabled or self._client is None:
             return False
         try:
-            return bool(await self._client.ping())
+            ok = bool(await self._client.ping())
         except Exception as exc:
-            logger.warning("Redis ping 失败，缓存降级为旁路: %s", exc)
-            self._enabled = False
+            if not self._degraded:
+                logger.warning("Redis ping 失败，缓存降级为旁路: %s", exc)
+            self._degraded = True
             return False
+
+        if ok and self._degraded:
+            logger.info("Redis 已恢复，缓存重新启用: %s", mask_dsn(settings.redis_url))
+            self._degraded = False
+        return ok
 
     # ── 单值读写 ────────────────────────────────────────────────────────────────
 

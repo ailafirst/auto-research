@@ -3,6 +3,7 @@ import { CreateForm } from './components/CreateForm'
 import { ProgressView } from './components/ProgressView'
 import { History } from './components/History'
 import { Ops } from './components/Ops'
+import { HealthBar } from './components/HealthBar'
 
 type View =
   | { name: 'create' }
@@ -39,6 +40,7 @@ export default function App() {
             运维概览
           </button>
         </nav>
+        <HealthBar />
       </header>
 
       <main className="content">

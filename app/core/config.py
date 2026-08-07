@@ -49,13 +49,24 @@ class Settings(BaseSettings):
     tavily_include_raw_content: bool = True
     # 学术源双路（方案①）：每次查询在通用搜索外，再并发一路限定学术白名单域的 Tavily
     # 检索并合并，让研究/综述源进入候选池；相关性交给 reranker 自过滤（统一生效，不猜
-    # 问题类型）。仅 Tavily 路生效。详见 docs/证据信源质量改进方案.md。
+    # 问题类型）。仅 Tavily 路生效。详见 docs/检索与证据.md。
     academic_search_enabled: bool = True
 
     # --- Qdrant ---
+    # memory=进程内实例（零基础设施，单进程内跑完一个任务够用，为历史默认）；
+    # remote=连 qdrant_url 指向的服务，向量可持久化并跨进程共享。remote 不可达时
+    # 自动回退 memory（降级安全，与 Redis/队列/模型服务一致），实际生效模式见 /health。
+    qdrant_mode: Literal["memory", "remote"] = "memory"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "deep_research_chunks"
+    # 证据向量保留天数（0=不清理）。memory 模式下向量随进程消失，无需过期策略；
+    # remote 模式会一直累积（实测单任务约 2000 chunk ≈ 10MB），必须有时效性。
+    # 取 7 天是因为向量只在任务执行期间（含多轮补证，分钟级）被检索，任务完成后
+    # 报告已落 MySQL，向量再无读取方——留一周纯粹是给排查留窗口。
+    vector_ttl_days: int = 7
+    # 过期清理的执行时刻（worker 内 arq cron，UTC）。默认每天 03:00，错开白天使用。
+    vector_cleanup_hour: int = 3
 
     # --- RAG ---
     embedding_provider: Literal["fastembed", "st", "api"] = "fastembed"
@@ -121,8 +132,37 @@ class Settings(BaseSettings):
     max_concurrent_fetches: int = 5
     max_sources_per_round: int = 20
 
-    # --- Secret ---
-    secret_key: str = "change-me-in-production"
+    # --- /health 明细令牌 ---
+    # /health 经 Nginx 公网可达，而它的 dependencies[].detail 里是内部主机名、端口、
+    # 数据库用户名、各组件版本号和失败时的异常原文——对排查有用，对公网访客则是白送
+    # 的踩点信息。为空（默认）时任何调用方都只拿到 name/ok/skipped；配了值以后，带
+    # `X-Health-Token: <值>` 的请求才能看到 detail。
+    #
+    # 不用「按来源 IP 判断内网」那套：本项目的公网入口是 frp 隧道，frpc 在宿主机上
+    # 回连 127.0.0.1:80，公网流量到 Nginx 时的 $remote_addr 和本机访问完全一样，
+    # 在 IP 层面根本区分不开。
+    health_detail_token: str = ""
 
 
 settings = Settings()
+
+
+def mask_dsn(dsn: str) -> str:
+    """把 DSN 里的口令替换成 ***，供日志与 /health 输出使用。
+
+    容器化部署后 Redis / MySQL 都启用了口令，而口令是写在 URL 里的。这些 URL 原本
+    被直接打进日志，而 /health 的 dependencies[].detail 又会把它们返回给调用方——
+    该端点经 Nginx 公网可达，等于把基础设施口令挂到公网上。凡是要把 DSN 交给
+    日志或响应体的地方，都必须先过这个函数。
+    """
+    if not dsn or "@" not in dsn:
+        return dsn
+    scheme, sep, rest = dsn.partition("://")
+    if not sep:
+        return dsn
+    creds, _, host = rest.rpartition("@")
+    if ":" not in creds:
+        # 只有用户名没有口令，无需隐去
+        return dsn
+    user, _, _password = creds.partition(":")
+    return f"{scheme}://{user}:***@{host}"

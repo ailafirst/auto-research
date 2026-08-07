@@ -1,0 +1,50 @@
+# 构建上下文是项目根目录，这里的排除项直接决定 docker build 要传多少数据。
+# 头号大户是 deployment/runtime/ —— 里面有 7.1GB 模型权重、Nginx/frp 二进制和
+# 隧道令牌，既不该进镜像也不该进构建上下文。
+
+# 部署运行时：模型缓存、包缓存、临时目录、Nginx/frp 二进制、私有 secrets
+deployment/runtime/
+
+# 依赖与构建产物
+web/node_modules/
+web/dist/
+.venv/
+venv/
+env/
+**/__pycache__/
+**/*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 版本控制与 IDE
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# 运行产物
+output/
+htmlcov/
+.coverage
+coverage/
+*.stackdump
+
+# 凭据（镜像里一律不放；私有配置在运行时经 compose env_file 注入）
+# 两条都要：.dockerignore 的模式是对整条相对路径做匹配，`.env` 只命中根目录那份，
+# deployment/docker/.env（四个基础设施口令）要靠 **/.env 才排得掉。
+.env
+**/.env
+tavily.txt
+aliyun.txt
+
+# 与运行无关的资料
+docs/
+benchmark/results/
+benchmark/GoldenDataset/_corpus_*.json
+benchmark/GoldenDataset/golden_set_raw.json
+rag_experiments/
+tests/
+ui/
+hub/
+*.md

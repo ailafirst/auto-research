@@ -32,6 +32,15 @@ htmlcov/
 .coverage
 coverage/
 
+# 工具缓存
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# HuggingFace 模型缓存。HF_HOME 未指向 deployment/runtime 时（手工跑 model_server
+# 或直接 python -c 导模型）权重会落到这里，当前已有 4.7GB。入库一次就再也 clone 不动了。
+hub/
+
 # 测试数据
 tests/data/
 

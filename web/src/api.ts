@@ -159,11 +159,42 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
   return res.json() as Promise<T>
 }
 
+// GET /health —— 后端实时探测各依赖。HTTP 恒 200，健康度看 status。
+// 容器化部署下模型服务在宿主机、API 在容器里，这条是判断「能不能真的跑研究」的依据。
+export type DependencyStatus = {
+  name: string
+  ok: boolean
+  detail: string
+  skipped: boolean
+  mode: string | null
+}
+
+export type Health = {
+  status: 'ok' | 'degraded'
+  version: string
+  qdrant_connected: boolean
+  qdrant_mode: string
+  failed: string[]
+  dependencies: DependencyStatus[]
+}
+
+// 依赖名 → 中文label。模型服务不可用会让研究任务直接失败，其余各项都能降级，
+// 前端据此区分「阻断」和「降级」两种告警。
+export const DEP_LABEL: Record<string, string> = {
+  model_service: '模型服务',
+  qdrant: '向量库',
+  redis: 'Redis',
+  database: '数据库',
+  queue: '任务队列',
+}
+
+export const BLOCKING_DEPS = new Set(['model_service'])
+
 export const api = {
   create: (r: CreateRequest) =>
     req<{ task_id: string; status: string }>('POST', '/api/research', r),
   progress: (id: string) =>
     req<ProgressSnapshot>('GET', `/api/research/${id}/progress`),
   list: () => req<TaskStatus[]>('GET', '/api/research'),
-  health: () => req<{ status: string }>('GET', '/health'),
+  health: () => req<Health>('GET', '/health'),
 }

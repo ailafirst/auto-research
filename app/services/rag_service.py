@@ -162,6 +162,12 @@ def _get_http_client() -> httpx.AsyncClient:
         _http_client = httpx.AsyncClient(
             base_url=settings.model_service_url,
             timeout=settings.model_service_timeout,
+            # 模型服务是同机回环地址，绝不该经代理。httpx 默认 trust_env=True 会用
+            # urllib.getproxies()，它在 Windows 上除环境变量外还读注册表里的系统代理
+            # （Clash 等常设 127.0.0.1:x），连 127.0.0.1 也会被塞进代理返回 502 ——
+            # 随后 _embed_raw 静默回退本地加载，worker 自己拉起 bge-m3，正是模型
+            # 服务化要消除的那份显存/内存开销。
+            trust_env=False,
         )
     return _http_client
 

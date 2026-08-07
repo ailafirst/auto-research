@@ -13,10 +13,11 @@ import logging
 from pathlib import Path
 
 from sqlalchemy import String, Text, event
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from app.core.config import settings
+from app.core.config import mask_dsn, settings
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,13 @@ class TaskRow(Base):
     query: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[str] = mapped_column(String(40), index=True, default="")
     updated_at: Mapped[str] = mapped_column(String(40), default="")
-    data: Mapped[str] = mapped_column(Text, default="{}")   # 完整 ResearchTask.to_dict() 的 JSON
+    # 完整 ResearchTask.to_dict() 的 JSON。MySQL 的 TEXT 上限是 64KB，而这一列装着
+    # 研究计划 + 信源评估 + 报告全文——当前实测最大 11KB，但 20 信源的长任务逼近
+    # 上限完全可能，超了会直接 "Data too long for column"。MySQL 上用 LONGTEXT；
+    # SQLite 的 TEXT 本就无长度限制，保持不变。
+    data: Mapped[str] = mapped_column(
+        Text().with_variant(LONGTEXT, "mysql"), default="{}"
+    )
 
 
 _engine: AsyncEngine | None = None
@@ -61,7 +68,7 @@ def get_engine() -> AsyncEngine:
                 cur.execute("PRAGMA busy_timeout=5000")    # 写锁竞争时最多等 5s，避免 locked
                 cur.execute("PRAGMA synchronous=NORMAL")
                 cur.close()
-        logger.info("数据库引擎已创建: %s", url)
+        logger.info("数据库引擎已创建: %s", mask_dsn(url))
     return _engine
 
 

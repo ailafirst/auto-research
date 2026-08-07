@@ -23,7 +23,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes_research import router as research_router
 from app.api.schemas import HealthResponse
-from app.core.config import settings
+from app.core.config import mask_dsn, settings
 from app.core.exceptions import DeepResearchError
 from app.core.logging import setup_logging
 
@@ -37,18 +37,8 @@ async def lifespan(app: FastAPI):
     logger.info("Deep Research Agent 启动中...")
     logger.info("环境: %s, LLM: %s/%s", settings.app_env, settings.llm_provider, settings.llm_model)
 
-    # 检查 Qdrant 连接
-    try:
-        from app.services.vector_store import VectorStoreService
-        vs = VectorStoreService()
-        qdrant_ok = await vs.health_check()
-        if qdrant_ok:
-            logger.info("Qdrant 连接成功: %s", settings.qdrant_url)
-        else:
-            logger.warning("Qdrant 不可用: %s", settings.qdrant_url)
-        await vs.close()
-    except Exception as exc:
-        logger.warning("Qdrant 连接检查失败: %s", exc)
+    # Qdrant / Redis / DB / 队列 / 模型服务的连通性统一在下方 verify_on_startup 里探测，
+    # 放到各依赖初始化之后，一次性给出完整结论（见 app/services/health_service.py）。
 
     # 预连接任务队列（arq）；不可用则请求时回退进程内执行。提到模型预热之前，
     # 因为「本进程是否需要本地模型」取决于队列是否真的接管了研究流程。
@@ -94,7 +84,7 @@ async def lifespan(app: FastAPI):
         from app.services.cache_service import get_cache
         cache = get_cache()
         if cache.enabled and await cache.ping():
-            logger.info("缓存连接成功: %s", settings.redis_url)
+            logger.info("缓存连接成功: %s", mask_dsn(settings.redis_url))
     except Exception as exc:
         logger.warning("缓存初始化失败（不影响启动）: %s", exc)
 
@@ -102,9 +92,17 @@ async def lifespan(app: FastAPI):
     try:
         from app.services.db import init_db
         await init_db()
-        logger.info("数据库就绪: %s", settings.database_url)
+        logger.info("数据库就绪: %s", mask_dsn(settings.database_url))
     except Exception as exc:
         logger.warning("数据库初始化失败: %s", exc)
+
+    # 依赖统一校验 —— 各依赖都初始化完再探测，结论一次性给全。模型服务不可达会以
+    # error 级别记录：容器镜像不含 torch 时那不是「变慢」，是研究任务必然失败。
+    try:
+        from app.services.health_service import verify_on_startup
+        await verify_on_startup()
+    except Exception as exc:
+        logger.warning("依赖校验未能完成（不影响启动）: %s", exc)
 
     yield
 
@@ -126,6 +124,12 @@ async def lifespan(app: FastAPI):
     try:
         from app.services.queue import close_arq_pool
         await close_arq_pool()
+    except Exception:
+        pass
+
+    try:
+        from app.services.health_service import close_probe_store
+        await close_probe_store()
     except Exception:
         pass
 
@@ -171,9 +175,19 @@ async def general_error_handler(request: Request, exc: Exception):
 
 
 @app.get("/health", response_model=HealthResponse)
-async def health_check() -> HealthResponse:
-    """健康检查端点。"""
-    return HealthResponse(qdrant_connected=True, qdrant_mode="memory")
+async def health_check(request: Request) -> HealthResponse:
+    """健康检查端点 —— 实时探测各依赖，HTTP 恒 200，健康度看 status 字段。
+
+    本端点经 Nginx 公网可达。各依赖的 detail（内部主机名、端口、库用户名、组件版本、
+    失败时的异常原文）默认不返回，需带 `X-Health-Token` 且与 HEALTH_DETAIL_TOKEN
+    相符才给——详见 app/services/health_service.py 的 detail_allowed()。
+    """
+    from app.services.health_service import collect_health, detail_allowed, redact_health
+
+    result = await collect_health()
+    if not detail_allowed(request.headers.get("x-health-token")):
+        result = redact_health(result)
+    return HealthResponse(**result)
 
 
 @app.get("/")

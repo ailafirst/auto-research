@@ -1,0 +1,206 @@
+# 容器化部署 —— 除模型服务外的全部组件
+#
+#   容器内：nginx / api / worker×N / mysql / redis / qdrant
+#   宿主机：model-server（需要 GPU 与 7.1GB 权重，见 deployment/start-all.ps1）
+#
+# 启动：
+#   docker compose -f deployment/docker/compose.yaml up -d --build
+#
+# 前提 —— 宿主机的模型服务必须监听 0.0.0.0 而非 127.0.0.1，否则容器经
+# host.docker.internal 连不上（走的是宿主网卡地址，不是回环）：
+#   .\deployment\start-all.ps1 -ModelServerHost 0.0.0.0 ...
+#
+# 显式固定 project 名。不写的话 compose 会按 compose.yaml 所在目录取名（这里是
+# "docker"），换个目录名或从别处引用同一份文件就会变成另一套工程，容器和数据卷
+# 全部重建——MySQL 里的任务记录和 Qdrant 里的向量都会「消失」。
+name: deepresearch-docker
+
+x-app-env: &app-env
+  # 容器内的服务地址，覆盖根 .env 里那些面向宿主机的 127.0.0.1/localhost 取值。
+  # compose 的 environment 优先级高于 env_file，所以这里的值最终生效。
+  #
+  # 三个基础设施口令都只在这里拼装，取值来自同目录 .env（未纳入版本库）。口令写进
+  # DSN 后不可再直接打日志——见 app/core/config.py 的 mask_dsn()。
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD 未设置，请先生成 deployment/docker/.env}@redis:6379/0
+  DATABASE_URL: mysql+aiomysql://deepresearch:${MYSQL_PASSWORD:?MYSQL_PASSWORD 未设置，请先生成 deployment/docker/.env}@mysql:3306/deepresearch
+  QDRANT_MODE: remote
+  QDRANT_URL: http://qdrant:6333
+  QDRANT_API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY 未设置，请先生成 deployment/docker/.env}
+  # /health 明细令牌。这一项刻意用 :- 而不是 :?：缺了只是看不到 detail，服务照常
+  # 运行，不值得为它拒绝启动（另外四个是连不上基础设施，性质不同）。
+  HEALTH_DETAIL_TOKEN: ${HEALTH_DETAIL_TOKEN:-}
+  # 模型服务留在宿主机吃 GPU
+  MODEL_SERVICE_URL: http://host.docker.internal:8100
+  FASTEMBED_CACHE_PATH: /models/fastembed
+  HF_HOME: /models/huggingface
+
+services:
+  # ── 基础设施 ────────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.4
+    command:
+      # 中文查询与报告必须 utf8mb4；MySQL 8 默认已是 utf8mb4，显式写死避免镜像换版本时漂移
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: deepresearch
+      MYSQL_USER: deepresearch
+      # 这两个只在数据卷首次初始化时生效。卷已存在时改这里不会改数据库里的口令，
+      # 轮换必须走 ALTER USER，步骤见 README「凭据轮换」。
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD 未设置，请先生成 deployment/docker/.env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置，请先生成 deployment/docker/.env}
+      # root 默认会建成 root@'%'（任意主机可登录）。应用只用 deepresearch 账号，
+      # root 仅供容器内运维，限制为本机。
+      MYSQL_ROOT_HOST: localhost
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      # 只绑回环：容器之间走服务名，这个映射仅供宿主机侧的数据迁移与排查。
+      # 不写 127.0.0.1 的话 Docker 默认绑 0.0.0.0，会把带默认弱口令的 MySQL
+      # 暴露到局域网。下面 redis / qdrant 同理，两者本身都没有鉴权。
+      - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
+    healthcheck:
+      # 不用 mysqladmin ping：它在「服务器活着但认证失败」时同样退出 0，只能证明端口
+      # 通，证明不了库能用。实跑一条 SELECT 才能同时覆盖认证、库存在、可查询三件事
+      # ——依赖它的 api/worker 正是靠这个账号连库的。
+      # $$ 是转义，让容器内的 shell 展开自身环境变量，口令因此不出现在 compose 文件
+      # 和 docker inspect 的 healthcheck 定义里。
+      test: ["CMD-SHELL", 'mysql -u"$$MYSQL_USER" -p"$$MYSQL_PASSWORD" -e "SELECT 1" "$$MYSQL_DATABASE" >/dev/null 2>&1']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # 向量缓存量大，限内存 + LRU 防涨爆。
+    # requirepass：Redis 默认无鉴权，而它同时承载 arq 队列（能投递任意任务）、
+    # embedding 缓存和限流计数，是这套里最不该裸奔的一个。
+    # 这里必须用单个 $ 让 compose 在编排侧插值：command 是 exec 形式，容器里没有
+    # shell 去展开 $$REDIS_PASSWORD，写成 $$ 会把「${REDIS_PASSWORD}」这七个字符
+    # 当成口令本身。下面 healthcheck 是 CMD-SHELL，才轮到容器内 shell 展开，用 $$。
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD 未设置，请先生成 deployment/docker/.env}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      # --no-auth-warning 抑制 stderr 上的口令告警，避免每 5 秒污染一次容器日志
+      test: ["CMD-SHELL", 'redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  qdrant:
+    # 必须与 requirements.txt 解析出的 qdrant-client 版本对齐：客户端会检查
+    # 「major 相同且 minor 相差不超过 1」，超出范围时不只是告警——实测 client
+    # 1.19 对 server 1.12 写入会直接失败（store_chunks 抛出空消息的异常，
+    # 表现为「Qdrant 不可用，跳过向量入库」，RAG 证据整段被跳过而任务照常完成）。
+    # 升 qdrant-client 时这里要跟着升。
+    image: qdrant/qdrant:v1.19.0
+    environment:
+      # Qdrant 默认无鉴权，任何能连上 6333 的进程都可读写甚至删除整个集合。
+      # 仅内网明文传输（未启 TLS），启动日志里会有相应告警——容器网络内可接受，
+      # 端口也只绑回环。
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?QDRANT_API_KEY 未设置，请先生成 deployment/docker/.env}
+    volumes:
+      - qdrant-data:/qdrant/storage
+    ports:
+      - "127.0.0.1:${QDRANT_PORT:-6334}:6333"
+    healthcheck:
+      # qdrant 镜像里没有 curl/wget，用它自带的 Rust 二进制做 TCP 探活
+      test: ["CMD", "/qdrant/qdrant", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── 应用 ────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+      target: app
+    image: deepresearch-app:latest
+    env_file:
+      # 私有配置（LLM_API_KEY / TAVILY_API_KEY 等）仍从根 .env 取，不进镜像。
+      # 其中面向宿主机的地址由下面的 environment 覆盖。
+      - ../../.env
+    environment: *app-env
+    extra_hosts:
+      # Docker Desktop 会自动提供 host.docker.internal，Linux 上需要这一行才有
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - model-cache:/models
+      - app-output:/data
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      qdrant: { condition: service_healthy }
+    healthcheck:
+      # /health 恒返回 200（健康度在 body 的 status 字段里），所以这里判的是
+      # 「进程活着且能响应」，而不是「所有依赖都正常」——否则 Redis 抖一下就会
+      # 把一个完全可以降级运行的 API 判成 unhealthy 并重启。
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+      target: app
+    image: deepresearch-app:latest
+    command: ["arq", "app.worker.WorkerSettings"]
+    env_file:
+      - ../../.env
+    environment: *app-env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - model-cache:/models
+      - app-output:/data
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      qdrant: { condition: service_healthy }
+      api: { condition: service_started }
+    deploy:
+      # 横向扩展：docker compose up -d --scale worker=4
+      replicas: ${WORKER_REPLICAS:-2}
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+      target: web
+    image: deepresearch-web:latest
+    ports:
+      # 这是全栈唯一对外暴露的端口（mysql/redis/qdrant 都只绑回环，api 无映射）。
+      # 兜底值取 8080 而非 80：脚本生成的 .env 会显式写 WEB_PORT=80，走到这个默认值
+      # 说明是有人手工拼的 compose 命令，此时抢 80 端口不如让它起在 8080 上更安全。
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api: { condition: service_started }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:
+  qdrant-data:
+  model-cache:
+  app-output:

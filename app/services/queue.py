@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.core.config import settings
+from app.core.config import mask_dsn, settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ async def get_arq_pool() -> Any | None:
         from arq import create_pool
         from arq.connections import RedisSettings
         _pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
-        logger.info("arq 任务队列已连接: %s", settings.redis_url)
+        logger.info("arq 任务队列已连接: %s", mask_dsn(settings.redis_url))
     except Exception as exc:
         logger.warning("arq 队列不可用，回退进程内执行: %s", exc)
         _pool = None

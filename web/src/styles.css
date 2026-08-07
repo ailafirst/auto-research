@@ -274,3 +274,33 @@ a:hover { text-decoration: underline; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty { text-align: center; color: var(--muted); padding: 40px; }
+
+/* ── 依赖健康指示（顶栏右侧）── */
+.health-wrap { position: relative; }
+.health {
+  padding: 5px 12px; border: 1px solid transparent; border-radius: 8px;
+  font-size: 13px; background: transparent; white-space: nowrap;
+}
+.health-checking { color: var(--muted); }
+.health-ok { color: var(--green); background: var(--green-weak); }
+.health-warn { color: var(--amber); background: var(--amber-weak); }
+.health-down { color: var(--red); background: var(--red-weak); font-weight: 600; }
+
+.health-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 20;
+  min-width: 380px; max-width: 560px; padding: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.health-row { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 12px; }
+.health-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.health-dot.ok { background: var(--green); }
+.health-dot.bad { background: var(--red); }
+.health-dot.skipped { background: var(--border); }
+.health-name { width: 68px; flex: none; color: var(--text); font-weight: 600; }
+.health-detail { color: var(--muted); word-break: break-all; }
+.health-hint {
+  margin-top: 10px; padding: 9px 11px; font-size: 12px; line-height: 1.6;
+  color: var(--red); background: var(--red-weak); border-radius: 8px;
+}
+.health-hint code { font-family: var(--mono); font-size: 11px; }

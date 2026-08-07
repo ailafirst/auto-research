@@ -18,7 +18,7 @@ from app.services.cache_service import get_cache
 logger = logging.getLogger(__name__)
 
 # 方案①：静态学术白名单域（Tavily include_domains 用）。命中不命中交给 reranker 自过滤，
-# 不做问题类型判断。详见 docs/证据信源质量改进方案.md。
+# 不做问题类型判断。详见 docs/检索与证据.md。
 ACADEMIC_ALLOWLIST: list[str] = [
     "arxiv.org", "biorxiv.org", "medrxiv.org", "ncbi.nlm.nih.gov",
     "pubmed.ncbi.nlm.nih.gov", "pmc.ncbi.nlm.nih.gov", "nature.com",
@@ -43,15 +43,25 @@ class TavilyQuotaError(Exception):
 
 
 def _load_tavily_keys() -> list[str]:
-    """从项目根目录 tavily.txt 加载 API key 列表。"""
-    key_file = Path(__file__).parent.parent.parent / "tavily.txt"
-    if not key_file.exists():
-        return []
+    """加载 Tavily key 轮换池：项目根目录 tavily.txt + .env 里的 TAVILY_API_KEY。
+
+    环境变量那个也要并进池子，否则 probe_key_pool 这类只读池的调用方会认为「一个
+    key 都没有」而直接判定耗尽——容器化部署里 tavily.txt 不进镜像（含密钥，被
+    .dockerignore 排除），key 只从环境变量来，正是这种情况。
+    """
     keys: list[str] = []
-    for line in key_file.read_text(encoding="utf-8").splitlines():
-        m = re.search(r"(tvly-\S+)", line.strip())
-        if m:
-            keys.append(m.group(1))
+
+    key_file = Path(__file__).parent.parent.parent / "tavily.txt"
+    if key_file.exists():
+        for line in key_file.read_text(encoding="utf-8").splitlines():
+            m = re.search(r"(tvly-\S+)", line.strip())
+            if m:
+                keys.append(m.group(1))
+
+    env_key = (settings.tavily_api_key or "").strip()
+    if env_key and env_key not in keys:
+        keys.append(env_key)
+
     return keys
 
 
@@ -320,7 +330,7 @@ class SearchService:
 
         统一生效、不猜问题类型——命中不命中交给下游 reranker 自过滤。降级安全：
         非 Tavily 引擎或学术路失败/为空时，退回通用结果。详见
-        docs/证据信源质量改进方案.md。
+        docs/检索与证据.md。
         """
         # 学术域名过滤是 Tavily 特性；DDG 路直接走通用搜索
         if self._current_provider != "tavily":

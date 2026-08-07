@@ -1,0 +1,26 @@
+# 仓库内一律以 LF 存储，检出时按平台还原。没有这份文件时，行尾完全取决于每台机器的
+# core.autocrlf，同一份代码在不同人那里会产生纯行尾差异的「幽灵改动」。
+* text=auto eol=lf
+
+# Windows 专用脚本检出为 CRLF。Windows PowerShell 5.1 对 LF 本身是容忍的，但用
+# 记事本之类的编辑器打开会连成一行，改坏的概率比统一 CRLF 高。
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
+
+# 进容器/在容器里执行的东西必须是 LF：CRLF 会让 shebang 变成 `/bin/sh\r`，
+# 报错信息是「No such file or directory」，指向的却是存在的解释器。
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+*.conf          text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+
+# 二进制，不做任何行尾与差异处理
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.pdf    binary
+*.woff   binary
+*.woff2  binary
