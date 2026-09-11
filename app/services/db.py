@@ -59,7 +59,19 @@ def get_engine() -> AsyncEngine:
             dbfile = url.split(":///")[-1]
             if dbfile and dbfile != ":memory:":
                 Path(dbfile).parent.mkdir(parents=True, exist_ok=True)
-        _engine = create_async_engine(url, future=True)
+        engine_kwargs: dict = {"future": True}
+        if not url.startswith("sqlite"):
+            # worker 常常几天没有任务，连接池里的连接会闲置超过 MySQL 默认
+            # wait_timeout（8h）。服务端悄悄断开后客户端并不知情，池里拿到这条
+            # 死连接执行首条 SQL 就会报 "Lost connection to MySQL server during
+            # query"（errno 2013）——现象是空闲一段时间后提交的头一两个任务必失败，
+            # 之后的任务又正常（坏连接被自动剔出池）。pre_ping 在每次取用前探活，
+            # recycle 在连接活满 30 分钟后主动换新，双保险覆盖闲置和网络抖动两类断连。
+            # 仅对非 sqlite 生效：sqlite 没有服务端超时这回事，若 DATABASE_URL 指向
+            # :memory:，recycle 换连接等于清空整个内存库，纯粹有害无益。
+            engine_kwargs["pool_pre_ping"] = True
+            engine_kwargs["pool_recycle"] = 1800
+        _engine = create_async_engine(url, **engine_kwargs)
         if _engine.dialect.name == "sqlite":
             @event.listens_for(_engine.sync_engine, "connect")
             def _sqlite_pragmas(dbapi_conn, _record):  # noqa: ANN001
