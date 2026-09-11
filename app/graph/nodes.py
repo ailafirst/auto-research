@@ -21,7 +21,7 @@ from app.core.config import settings
 from app.graph.state import ResearchState
 from app.services.crawler_service import CrawlerService
 from app.services.rag_service import RAGService, get_rag_service, rerank_chunks
-from app.services.search_service import SearchService
+from app.services.search_service import VERTICAL_ROUTES, SearchService
 
 logger = logging.getLogger(__name__)
 
@@ -417,31 +417,71 @@ async def retriever_node(state: ResearchState) -> dict[str, Any]:
 
     sub_questions = state.get("sub_questions", [])
 
+    # P0 域驱动路由 + 子问题级下沉：垂直双路按每个子问题自己的 domain 触发，不再是
+    # 整个研究计划共用一个全局 domain（旧版如此）。根因见 docs/检索路由蓝图.md §9.13：
+    # 全局单标签会让 general 域几乎打不到（选具体域能让部分子问题吃到垂直源加成，选
+    # general 则让整个任务放弃），也会让同时沾两个域的问题被迫二选一。Planner 现在给
+    # 每个子问题单独标 domain（app/prompts/planner.md 的 Sub-question Rules #5），这里
+    # 按 sq_id 查表；第 1 轮和第 2+ 轮补证（research_runner._supplement_round）用的都是
+    # 这张表，两轮都能查到 sq_id 对应的 domain。真正缺失归属的查询（子问题没标 domain，
+    # 或调用方没传 sub_questions 走了兜底分支）回退到顶层 research_strategy.domain。
+    # 映射表取值及取舍依据见
+    # search_service.py 里的注释——别只看 domain 名字猜「哪些领域该有对应垂直源」，
+    # science 单独判断实测证明是错的。settings.academic_search_enabled 仍是全局总开关
+    # （名字历史遗留，现在管的是全部垂直路由，不止学术路，见 config.py 里的注释）。
+    fallback_domain = state.get("research_strategy", {}).get("domain", "general")
+    sq_domain: dict[str, str] = {
+        sq.get("id", ""): sq.get("domain") or fallback_domain
+        for sq in sub_questions
+    }
+    # AnySearch 差距 #2（路由粒度）的增量：子问题真正跨两个域时不强迫二选一，两个域
+    # 各自的垂直源都搜（`search_vertical_multi`），命中不命中交给下游自过滤——对应
+    # planner.md Sub-question Rules #6 的 `domain_secondary`，只在 Planner 明确标注时
+    # 才生效，绝大多数子问题走的还是下面的单域 `_vertical_route_for` 路径。见
+    # docs/检索路由蓝图.md §9.13。
+    sq_domain_secondary: dict[str, str] = {
+        sq.get("id", ""): sq["domain_secondary"]
+        for sq in sub_questions
+        if sq.get("domain_secondary")
+        and sq.get("domain_secondary") != (sq.get("domain") or fallback_domain)
+    }
+
+    def _vertical_route_for(sq_id: str) -> tuple[str, list[str]] | None:
+        return VERTICAL_ROUTES.get(sq_domain.get(sq_id, fallback_domain))
+
     all_results: list[dict[str, Any]] = []
 
     if sub_questions:
-        follow_ups = state.get("follow_up_queries", [])
-        current_round = state.get("current_round", 1)
-
-        if follow_ups and current_round > 1:
-            # 第 2 轮：仅搜索 follow_up 查询（避免重复第 1 轮），结果归属为空由 analyst 走 accepted_docs 回退
-            tagged: list[tuple[str, str]] = [(q, "") for q in follow_ups[:5]]
-        else:
-            # 展平：[(query, sub_question_id), ...] — 在展平时打标，保留归属
-            tagged = [
-                (q, sq.get("id", ""))
-                for sq in sub_questions
-                for q in sq.get("search_queries", [])
-            ]
+        # 展平：[(query, sub_question_id), ...] — 在展平时打标，保留归属。
+        # 第 2+ 轮补证（research_runner._supplement_round）传入的 sub_questions 已经是
+        # 「只含 failed 子问题、且 search_queries 已被替换成该子问题自己的 follow_up_queries」
+        # （见 follow_up_by_sq），domain 字段随 sq 原样保留，所以这里不需要再单独分支去接
+        # 扁平的 state.follow_up_queries——那条列表是跨子问题去重合并后的粗粒度信号，会丢失
+        # sq_id 归属，导致第 2+ 轮全部退回 fallback_domain（已在 §9.13 记录为遗留缺口，
+        # 这次一并修复）。统一走这条展平路径即可让补证轮也吃到子问题级路由。
+        tagged: list[tuple[str, str]] = [
+            (q, sq.get("id", ""))
+            for sq in sub_questions
+            for q in sq.get("search_queries", [])
+        ]
 
         async def _search_tagged(query: str, sq_id: str) -> list[dict[str, Any]]:
-            # 方案①：学术双路（通用 + 学术白名单并发合并），相关性交给 reranker 自过滤
-            if settings.academic_search_enabled:
-                results = await search_service.search_academic_dual(
-                    query, max_results=settings.max_search_results)
+            # 方案①泛化：垂直双路（通用 + 域对应白名单并发合并），相关性交给 reranker 自过滤
+            secondary = sq_domain_secondary.get(sq_id)
+            if settings.academic_search_enabled and secondary is not None:
+                # 跨两个域的子问题：两个域各自的垂直源都搜，不强迫二选一
+                primary = sq_domain.get(sq_id, fallback_domain)
+                results = await search_service.search_vertical_multi(
+                    query, [primary, secondary], max_results=settings.max_search_results)
             else:
-                results = await search_service.search(
-                    query, max_results=settings.max_search_results)
+                vertical_route = _vertical_route_for(sq_id)
+                if settings.academic_search_enabled and vertical_route is not None:
+                    route_name, allowlist = vertical_route
+                    results = await search_service.search_vertical_dual(
+                        query, route_name, allowlist, max_results=settings.max_search_results)
+                else:
+                    results = await search_service.search(
+                        query, max_results=settings.max_search_results)
             return [{**r.model_dump(), "sub_question_id": sq_id} for r in results]
 
         batches = await asyncio.gather(
@@ -937,6 +977,10 @@ async def analyst_node(state: ResearchState) -> dict[str, Any]:
     sq_top_cids: dict[str, list[str]] = {}  # qid → 本题 top-3 CID（用于 user suffix hint）
 
     if qdrant_ok and rag_service:
+        # hybrid 是否触发、dense 侧要不要收窄到 hybrid_dense_k，由 retrieve_evidence
+        # 按每条子问题的查询文本自适应判断（含锚点才触发，见 sparse_tokenizer.
+        # has_lexical_anchor）——这里统一按未命中锚点的预算传参，命中时
+        # retrieve_evidence 内部会自己把预算收窄，不能在这一层写死。
         retrieve_k = settings.reranker_retrieve_k if settings.reranker_enabled else 6
 
         async def _rag_for_sq(sq: dict) -> tuple[str, list[dict]]:

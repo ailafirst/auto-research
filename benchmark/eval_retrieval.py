@@ -103,12 +103,24 @@ async def _index_corpus(rag, task_id: str, corpus: list[dict]) -> int:
     ]
     texts = [f"{c.title}\n\n{c.text}" if c.title else c.text for c in chunks]
     embs = await rag._embed(texts)
-    valid = [(c, e) for c, e in zip(chunks, embs)
+    valid = [(c, t, e) for c, t, e in zip(chunks, texts, embs)
              if e and not any(math.isnan(v) for v in e)]
     if not valid:
         return 0
-    vc, ve = zip(*valid)
-    await rag.vector_store.store_chunks(list(vc), list(ve))
+    vc = [c for c, _, _ in valid]
+    vt = [t for _, t, _ in valid]
+    ve = [e for _, _, e in valid]
+
+    sparse = None
+    from app.core.config import settings as _s
+    if _s.hybrid_enabled:
+        from app.services.sparse_tokenizer import get_bm25_encoder
+        enc = get_bm25_encoder()
+        lens = [enc.doc_length(t) for t in vt]
+        avgdl = sum(lens) / len(lens) if lens else 1.0
+        sparse = [enc.encode_document(t, avgdl) for t in vt]
+
+    await rag.vector_store.store_chunks(vc, ve, sparse)
     return len(vc)
 
 
@@ -217,7 +229,13 @@ async def main(golden_name: str, task_ids: list[str]) -> None:
     if task_ids:
         tasks = [t for t in tasks if t["id"] in task_ids]
 
-    retrieve_k  = settings.reranker_retrieve_k if settings.reranker_enabled else settings.rag_top_k
+    # hybrid 是否触发、dense 预算要不要收窄到 hybrid_dense_k，现在由 retrieve_evidence
+    # 按每条查询是否含锚点自适应决定（见 sparse_tokenizer.has_lexical_anchor），这里
+    # 统一传未命中锚点时的预算，与生产 retriever_node 的传参逻辑保持一致。
+    if settings.reranker_enabled:
+        retrieve_k = settings.reranker_retrieve_k
+    else:
+        retrieve_k = settings.rag_top_k
     rerank_k    = settings.reranker_top_k
     use_rerank  = settings.reranker_enabled
 

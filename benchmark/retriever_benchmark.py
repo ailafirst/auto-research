@@ -135,6 +135,13 @@ async def run_task(task: dict) -> dict:
     n_raw   = sum(1 for r in search_results if r.get("raw_content"))
     raw_pct = round(n_raw / max(len(search_results), 1) * 100)
 
+    # P0 域驱动路由观测：general/academic/business/legal/policy 各路贡献多少结果、实际服务的 provider 分布
+    route_counts: dict[str, int] = {}
+    provider_counts: dict[str, int] = {}
+    for r in search_results:
+        route_counts[r.get("search_route", "—")] = route_counts.get(r.get("search_route", "—"), 0) + 1
+        provider_counts[r.get("provider", "—")] = provider_counts.get(r.get("provider", "—"), 0) + 1
+
     return {
         **base,
         "strategy": {
@@ -147,11 +154,13 @@ async def run_task(task: dict) -> dict:
         "planner_s":      round(planner_elapsed, 2),
         "retriever_s":    round(retriever_elapsed, 2),
         "results": {
-            "total":     len(search_results),
-            "summaries": len(search_summaries),
-            "empty_sqs": empty_sqs,
-            "sq_counts": sq_counts,
-            "raw_pct":   raw_pct,
+            "total":           len(search_results),
+            "summaries":       len(search_summaries),
+            "empty_sqs":       empty_sqs,
+            "sq_counts":       sq_counts,
+            "raw_pct":         raw_pct,
+            "route_counts":    route_counts,
+            "provider_counts": provider_counts,
         },
     }
 
@@ -183,6 +192,11 @@ def _print_task(task: dict, r: dict) -> None:
     raw_color = _g if res["raw_pct"] >= 80 else _y if res["raw_pct"] >= 50 else _r
     print(f"  {'raw_content':<16} {raw_color(str(res['raw_pct']) + '%')}")
 
+    routes = res.get("route_counts", {})
+    if routes:
+        route_str = " / ".join(f"{k}={v}" for k, v in sorted(routes.items()))
+        print(f"  {'检索路由':<16} {route_str}")
+
     empty = res["empty_sqs"]
     if empty:
         print(f"  {'零结果子问题':<16} {_r(str(empty))}")
@@ -198,8 +212,8 @@ def _print_summary(results: list[dict], all_tasks: list[dict]) -> None:
     print(f"\n\n{'═' * 70}")
     print(f"  {_b('Retriever 基准测试汇总')}")
     print(f"{'═' * 70}")
-    print(f"  {'ID':>4}  {'名称':<22}  {'深度':<8}  {'Planner':>8}  {'Retriever':>10}"
-          f"  {'结果':>6}  {'摘要':>6}  {'raw%':>5}  {'归属'}")
+    print(f"  {'ID':>4}  {'名称':<22}  {'领域':<10}  {'Planner':>8}  {'Retriever':>10}"
+          f"  {'结果':>6}  {'摘要':>6}  {'raw%':>5}  {'垂直路':>6}  {'归属'}")
     print(f"  {'─' * 68}")
 
     for r in results:
@@ -212,16 +226,18 @@ def _print_summary(results: list[dict], all_tasks: list[dict]) -> None:
 
         s   = r["strategy"]
         res = r["results"]
-        dc  = {"shallow": _g, "medium": _y, "deep": _c}.get(s["depth"], str)
         empty = res["empty_sqs"]
         attr  = _g("✓") if not empty else _r(f"✗{len(empty)}")
         raw_c = _g if res["raw_pct"] >= 80 else _y if res["raw_pct"] >= 50 else _r
+        # 垂直路总数 = 除 general 外所有路由（academic/business/legal/policy...）之和
+        vertical_n = sum(n for route, n in res.get("route_counts", {}).items() if route != "general")
+        vertical_s = _c(str(vertical_n)) if vertical_n else _d("0")
 
         print(
-            f"  {tid:>4}  {name:<22}  {dc(s['depth']):<8}  "
+            f"  {tid:>4}  {name:<22}  {s['domain']:<10}  "
             f"{r['planner_s']:>7.1f}s  {r['retriever_s']:>9.1f}s  "
             f"{res['total']:>6}  {res['summaries']:>6}  "
-            f"{raw_c(str(res['raw_pct']) + '%'):>5}  {attr}"
+            f"{raw_c(str(res['raw_pct']) + '%'):>5}  {vertical_s:>6}  {attr}"
         )
 
     errors = sum(1 for r in results if r.get("error"))

@@ -1,7 +1,7 @@
 {
   "built_at": "2026-06-26T15:31:50.399717",
   "embedding_model": "BAAI/bge-m3",
-  "questions_per_task": 10,
+  "questions_per_task": "mixed（原 10/任务 + 锚点子集，见各 qa.anchor_terms）",
   "tasks": [
     {
       "id": "01",
@@ -11120,6 +11120,68 @@
             "src_golden_01_0012#57"
           ],
           "src_cid": "src_golden_01_0012#57"
+        },
+        {
+          "question": "TinyLlama-1.1B-Chat-v1.0 模型在 FP16 模式下的记忆体消耗是多少？",
+          "gold_cids": [
+            "src_golden_01_0000#17"
+          ],
+          "src_cid": "src_golden_01_0000#17",
+          "anchor_terms": [
+            "v1.0"
+          ]
+        },
+        {
+          "question": "当从INT16量化到INT8时，INT16的值范围如何映射？",
+          "gold_cids": [
+            "src_golden_01_0004#31"
+          ],
+          "src_cid": "src_golden_01_0004#31",
+          "anchor_terms": [
+            "INT16"
+          ]
+        },
+        {
+          "question": "AMD Instinct MI100/MI200/MI300系列GPU集成了什么类型的核心来增强计算能力？",
+          "gold_cids": [
+            "src_golden_01_0007#17"
+          ],
+          "src_cid": "src_golden_01_0007#17",
+          "anchor_terms": [
+            "MI100",
+            "MI200",
+            "MI300"
+          ]
+        },
+        {
+          "question": "MI300X 在 Llama 3.1-405B 上结合 FP8 量化和推测解码实现了多少倍的改进？",
+          "gold_cids": [
+            "src_golden_01_0012#32"
+          ],
+          "src_cid": "src_golden_01_0012#32",
+          "anchor_terms": [
+            "MI300X"
+          ]
+        },
+        {
+          "question": "Article 9将健康数据归类为哪种类型的数据？",
+          "gold_cids": [
+            "src_golden_01_0013#36"
+          ],
+          "src_cid": "src_golden_01_0013#36",
+          "anchor_terms": [
+            "Article 9"
+          ]
+        },
+        {
+          "question": "在模型量化测试中，使用F16作为基线有什么好处？",
+          "gold_cids": [
+            "src_golden_01_0015#6"
+          ],
+          "src_cid": "src_golden_01_0015#6",
+          "anchor_terms": [
+            "F16"
+          ]
         }
       ]
     },
@@ -18432,6 +18494,36 @@
             "src_golden_03_0002#39"
           ],
           "src_cid": "src_golden_03_0002#39"
+        },
+        {
+          "question": "根据片段，10.1126/science.1057726是为讨论哪个定理而提供的参考文献？",
+          "gold_cids": [
+            "src_golden_03_0008#18"
+          ],
+          "src_cid": "src_golden_03_0008#18",
+          "anchor_terms": [
+            "10.1126/science.1057726"
+          ]
+        },
+        {
+          "question": "DOI: 10.1038/s41534-016-0004-0所引用的图片展示了哪种量子编码方案？",
+          "gold_cids": [
+            "src_golden_03_0009#10"
+          ],
+          "src_cid": "src_golden_03_0009#10",
+          "anchor_terms": [
+            "10.1038/s41534-016-0004-0"
+          ]
+        },
+        {
+          "question": "DOI 10.1007/s12033-023-00765-4的论文作者和标题是什么？",
+          "gold_cids": [
+            "src_golden_03_0010#28"
+          ],
+          "src_cid": "src_golden_03_0010#28",
+          "anchor_terms": [
+            "10.1007/s12033-023-00765-4"
+          ]
         }
       ]
     },
@@ -24792,6 +24884,46 @@
             "src_golden_04_0010#68"
           ],
           "src_cid": "src_golden_04_0010#68"
+        },
+        {
+          "question": "BGE-Reranker-v2.5-Gemma2-Lightweight通过什么技术降低推理延迟以实现生产环境部署？",
+          "gold_cids": [
+            "src_golden_04_0004#20"
+          ],
+          "src_cid": "src_golden_04_0004#20",
+          "anchor_terms": [
+            "v2.5"
+          ]
+        },
+        {
+          "question": "代码中app_version设置为v0.1时，对应哪个app_name？",
+          "gold_cids": [
+            "src_golden_04_0005#55"
+          ],
+          "src_cid": "src_golden_04_0005#55",
+          "anchor_terms": [
+            "v0.1"
+          ]
+        },
+        {
+          "question": "在Prompt-level缓存策略中，SHA256用于哈希哪些内容？",
+          "gold_cids": [
+            "src_golden_04_0006#55"
+          ],
+          "src_cid": "src_golden_04_0006#55",
+          "anchor_terms": [
+            "SHA256"
+          ]
+        },
+        {
+          "question": "bge-large-en-v1.5编码器微调后，检索效果提升有什么具体影响？",
+          "gold_cids": [
+            "src_golden_04_0010#63"
+          ],
+          "src_cid": "src_golden_04_0010#63",
+          "anchor_terms": [
+            "v1.5"
+          ]
         }
       ]
     },
@@ -29912,6 +30044,46 @@
             "src_golden_05_0001#88"
           ],
           "src_cid": "src_golden_05_0001#88"
+        },
+        {
+          "question": "GH200NVL超级芯片的投产时间是什么时候？",
+          "gold_cids": [
+            "src_golden_05_0002#4"
+          ],
+          "src_cid": "src_golden_05_0002#4",
+          "anchor_terms": [
+            "GH200NVL"
+          ]
+        },
+        {
+          "question": "AMD MI355X的出货开始时间是什么时候？",
+          "gold_cids": [
+            "src_golden_05_0007#67"
+          ],
+          "src_cid": "src_golden_05_0007#67",
+          "anchor_terms": [
+            "MI355X"
+          ]
+        },
+        {
+          "question": "MI250芯片的速度与Nvidia A100芯片相比如何？",
+          "gold_cids": [
+            "src_golden_05_0009#6"
+          ],
+          "src_cid": "src_golden_05_0009#6",
+          "anchor_terms": [
+            "MI250"
+          ]
+        },
+        {
+          "question": "Gaudi 3在FB16格式下每秒能执行多少万亿次浮点运算？",
+          "gold_cids": [
+            "src_golden_05_0015#8"
+          ],
+          "src_cid": "src_golden_05_0015#8",
+          "anchor_terms": [
+            "FB16"
+          ]
         }
       ]
     },
@@ -38224,6 +38396,81 @@
             "src_golden_06_0007#9"
           ],
           "src_cid": "src_golden_06_0007#9"
+        },
+        {
+          "question": "PIPL 第 14 条对处理个人信息有哪些具体要求？",
+          "gold_cids": [
+            "src_golden_06_0000#1"
+          ],
+          "src_cid": "src_golden_06_0000#1",
+          "anchor_terms": [
+            "第 14 条",
+            "第 22 条",
+            "第 6 条"
+          ]
+        },
+        {
+          "question": "根据《人类遗传资源管理条例》第27条和第28条，人类遗传资源出境需要哪些具体程序？",
+          "gold_cids": [
+            "src_golden_06_0001#15"
+          ],
+          "src_cid": "src_golden_06_0001#15",
+          "anchor_terms": [
+            "第27条",
+            "第28条"
+          ]
+        },
+        {
+          "question": "《个人信息保护法》第 66 条对违法行为直接责任人有哪些具体处罚？",
+          "gold_cids": [
+            "src_golden_06_0004#2"
+          ],
+          "src_cid": "src_golden_06_0004#2",
+          "anchor_terms": [
+            "第 4 条",
+            "第 66 条"
+          ]
+        },
+        {
+          "question": "《个人信息保护法》第29条对敏感个人信息的处理提出了什么具体要求？",
+          "gold_cids": [
+            "src_golden_06_0008#5"
+          ],
+          "src_cid": "src_golden_06_0008#5",
+          "anchor_terms": [
+            "第29条"
+          ]
+        },
+        {
+          "question": "Article 16 规定个人信息处理者在什么情况下不得拒绝提供产品或服务？",
+          "gold_cids": [
+            "src_golden_06_0011#72"
+          ],
+          "src_cid": "src_golden_06_0011#72",
+          "anchor_terms": [
+            "Article 16"
+          ]
+        },
+        {
+          "question": "TC260发布的《认证规范V2.0》是什么时候发布的？",
+          "gold_cids": [
+            "src_golden_06_0013#3"
+          ],
+          "src_cid": "src_golden_06_0013#3",
+          "anchor_terms": [
+            "TC260"
+          ]
+        },
+        {
+          "question": "在GDPR数据跨境传输的规定中，第１４条是否被列为需要满足的特别规定之一？",
+          "gold_cids": [
+            "src_golden_06_0014#12"
+          ],
+          "src_cid": "src_golden_06_0014#12",
+          "anchor_terms": [
+            "第１４条",
+            "第３０条"
+          ]
         }
       ]
     },
@@ -44400,6 +44647,68 @@
             "src_golden_07_0011#22"
           ],
           "src_cid": "src_golden_07_0011#22"
+        },
+        {
+          "question": "在文章DOI 10.13658/j.cnki.sar.2023.05.021中，欧盟碳边境调节机制（CBAM）正式完成立法流程的日期是什么？",
+          "gold_cids": [
+            "src_golden_07_0001#1"
+          ],
+          "src_cid": "src_golden_07_0001#1",
+          "anchor_terms": [
+            "10.13658/j.cnki.sar.2023.05.021",
+            "F745",
+            "X196"
+          ]
+        },
+        {
+          "question": "CBAM的豁免如何确保与关税总协定第20 条一致？",
+          "gold_cids": [
+            "src_golden_07_0006#28"
+          ],
+          "src_cid": "src_golden_07_0006#28",
+          "anchor_terms": [
+            "第20 条"
+          ]
+        },
+        {
+          "question": "根据DOI:10.16235/j.cnki.33-1005/c.2024.01.015，美国气候投资法案在清洁能源领域的计划投资金额是多少？",
+          "gold_cids": [
+            "src_golden_07_0007#1"
+          ],
+          "src_cid": "src_golden_07_0007#1",
+          "anchor_terms": [
+            "10.16235/j.cnki.33-1005/c.2024.01.015"
+          ]
+        },
+        {
+          "question": "10.1002/wcc.462这篇文章的标题是什么？",
+          "gold_cids": [
+            "src_golden_07_0009#48"
+          ],
+          "src_cid": "src_golden_07_0009#48",
+          "anchor_terms": [
+            "10.1002/wcc.462"
+          ]
+        },
+        {
+          "question": "在COP30之前，各缔约方预计提交什么文件来更新他们的减排承诺？",
+          "gold_cids": [
+            "src_golden_07_0014#8"
+          ],
+          "src_cid": "src_golden_07_0014#8",
+          "anchor_terms": [
+            "COP30"
+          ]
+        },
+        {
+          "question": "10.1038/s41560-018-0179-z对应的论文标题是什么？",
+          "gold_cids": [
+            "src_golden_07_0015#18"
+          ],
+          "src_cid": "src_golden_07_0015#18",
+          "anchor_terms": [
+            "10.1038/s41560-018-0179-z"
+          ]
         }
       ]
     },
@@ -48328,6 +48637,16 @@
             "src_golden_08_0005#3"
           ],
           "src_cid": "src_golden_08_0005#3"
+        },
+        {
+          "question": "DOI 10.48550/arXiv.1508.01177的论文是在哪个研讨会上发表的？",
+          "gold_cids": [
+            "src_golden_08_0001#2"
+          ],
+          "src_cid": "src_golden_08_0001#2",
+          "anchor_terms": [
+            "10.48550/arXiv.1508.01177"
+          ]
         }
       ]
     },
@@ -58664,6 +58983,36 @@
             "src_golden_09_0010#33"
           ],
           "src_cid": "src_golden_09_0010#33"
+        },
+        {
+          "question": "论文10.18653/v1/2023.emnlp-main.172的页码范围是什么？",
+          "gold_cids": [
+            "src_golden_09_0001#116"
+          ],
+          "src_cid": "src_golden_09_0001#116",
+          "anchor_terms": [
+            "10.18653/v1/2023.emnlp-main.172"
+          ]
+        },
+        {
+          "question": "10.1016/j.telpol.2023.102649这篇论文的标题是什么？",
+          "gold_cids": [
+            "src_golden_09_0010#29"
+          ],
+          "src_cid": "src_golden_09_0010#29",
+          "anchor_terms": [
+            "10.1016/j.telpol.2023.102649"
+          ]
+        },
+        {
+          "question": "DOI 10.20944/preprints202504.1236.v1 的发布日期是什么？",
+          "gold_cids": [
+            "src_golden_09_0013#1"
+          ],
+          "src_cid": "src_golden_09_0013#1",
+          "anchor_terms": [
+            "10.20944/preprints202504.1236.v1"
+          ]
         }
       ]
     },
@@ -62560,6 +62909,56 @@
             "src_golden_10_0002#63"
           ],
           "src_cid": "src_golden_10_0002#63"
+        },
+        {
+          "question": "NCM662涂覆NiCo2S4后的容量保持率是多少？",
+          "gold_cids": [
+            "src_golden_10_0002#27"
+          ],
+          "src_cid": "src_golden_10_0002#27",
+          "anchor_terms": [
+            "NCM662"
+          ]
+        },
+        {
+          "question": "在10.1149/MA2020-025880mtgabs/ 中，电池一次充电的续航里程是多少英里？",
+          "gold_cids": [
+            "src_golden_10_0008#14"
+          ],
+          "src_cid": "src_golden_10_0008#14",
+          "anchor_terms": [
+            "10.1149/MA2020-025880mtgabs/"
+          ]
+        },
+        {
+          "question": "该EV充电器是否通过了UL2252认证？",
+          "gold_cids": [
+            "src_golden_10_0009#41"
+          ],
+          "src_cid": "src_golden_10_0009#41",
+          "anchor_terms": [
+            "UL2252"
+          ]
+        },
+        {
+          "question": "AP3464的输入电压范围是多少？",
+          "gold_cids": [
+            "src_golden_10_0013#29"
+          ],
+          "src_cid": "src_golden_10_0013#29",
+          "anchor_terms": [
+            "AP3464"
+          ]
+        },
+        {
+          "question": "AS700D的最大飞行高度是多少米？",
+          "gold_cids": [
+            "src_golden_10_0014#12"
+          ],
+          "src_cid": "src_golden_10_0014#12",
+          "anchor_terms": [
+            "AS700D"
+          ]
         }
       ]
     },
@@ -82896,8 +83295,40 @@
             "src_golden_12_0015#2"
           ],
           "src_cid": "src_golden_12_0015#2"
+        },
+        {
+          "question": "DOI为10.48550/arXiv.2211.03540的论文标题是什么？",
+          "gold_cids": [
+            "src_golden_12_0002#126"
+          ],
+          "src_cid": "src_golden_12_0002#126",
+          "anchor_terms": [
+            "10.48550/arXiv.2211.03540"
+          ]
+        },
+        {
+          "question": "在10.1007/978-3-319-12697-5_4 的上下文中，Barrett HC和Kurzban R的文章发表于哪一年？",
+          "gold_cids": [
+            "src_golden_12_0003#286"
+          ],
+          "src_cid": "src_golden_12_0003#286",
+          "anchor_terms": [
+            "10.1007/978-3-319-12697-5_4"
+          ]
+        },
+        {
+          "question": "DOI为10.1038/s41467-022-30761-2的论文发表在哪个年份？",
+          "gold_cids": [
+            "src_golden_12_0005#87"
+          ],
+          "src_cid": "src_golden_12_0005#87",
+          "anchor_terms": [
+            "10.1038/s41467-022-30761-2"
+          ]
         }
       ]
     }
-  ]
+  ],
+  "lexical_anchor_added": 42,
+  "updated_at": "2026-09-11T00:45:13.683369"
 }

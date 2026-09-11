@@ -271,3 +271,267 @@ opus-mt 三项要求（轻量/快/准）全达标，Recall@6 与重型 LLM 翻�
 | ~~+ sparse hybrid~~ | ~~0.850~~ | 实测负结果，否决 |
 | + 跨语言 query（P-XLing） | **0.892（实测 +3.4pp）** | 中问双路检索召回英文 gold |
 | + 多 gold（P2，按需） | 待测 | 校准测量、揭示真实召回（残留多为假象） |
+
+---
+
+## Hybrid Sparse 二次验证（阶段一最小验证，2026-09-10）—— ❌ 负结果，不进阶段二
+
+### 背景与和 P1 的区别
+
+P-XLing 落地后，生产 `reranker_retrieve_k=40` 把 rerank 后 Recall@6 顶到 0.900。质疑点：k=40 候选池
+过大、靠"扩池 + reranker 提取"垫高召回，`reranker_retrieve_k=20` 时降到 0.883。设想回到 k=20、用
+BM25 更精准地补回那 1.7pp，甚至反超。
+
+本轮相对 P1（`Hybrid Sparse — 不采纳` 一节）改了三处 P1 明确缺失的东西：
+
+1. **加性并集融合**，不是 RRF：dense top-20 候选**全部原样保留**，BM25 top-N 里 dense 没有的追加到
+   池尾一起送 reranker。BM25 只能"加"候选，不做 P1 里那种把 dense 候选顶下去的 RRF 全局重排。
+2. **jieba 中文分词**（`lcut_for_search`）+ ASCII 正则并集，不是 P1 的纯英文分词器 / ASCII 隔离正则。
+3. **P-XLing 译文喂给 sparse 侧**：sparse query = 原中文 query + opus-mt 英译，两者分词取并集。P1 从没把
+   翻译接到 sparse。
+
+### 实验设置
+
+`benchmark/eval_hybrid.py`（离线，不碰 `app/` / Qdrant collection / 生产依赖）。三条基线在**同一次进程、
+同一模型状态**下算出，消除跨轮噪声。依赖 `jieba` / `rank_bm25`（实验环境 `pip`，未进 `requirements.txt`）。
+
+### 实测（冻结黄金集 120 题，确定性）
+
+| 配置 | Recall@6 | vs dense@40 | rerank 池均值 | 捞回 | 挤占 | 净 |
+|---|---|---|---|---|---|---|
+| **基线 dense@20 → rerank** | 0.8833 | −0.0167 | 28.9 | — | — | — |
+| **基线 dense@40 → rerank（当前生产）** | **0.9000** | — | 57.3 | — | — | — |
+| hybrid@20 + jieba+ascii, N=5 | 0.8833 | −0.0167 | 31.2 | 1 | 1 | 0 |
+| hybrid@20 + jieba+ascii, N=10 | 0.8917 | −0.0083 | 34.6 | 2 | 1 | +1 |
+| hybrid@20 + jieba+ascii, N=15 | 0.8917 | −0.0083 | 38.3 | 2 | 1 | +1 |
+| hybrid@20 + ascii-only, N=5 | 0.8917 | −0.0083 | 31.6 | 2 | 1 | +1 |
+| hybrid@20 + ascii-only, N=10 | 0.8917 | −0.0083 | 35.3 | 2 | 1 | +1 |
+| **hybrid@20 + ascii-only, N=15** | **0.9000** | **0.0000** | 39.3 | 3 | 1 | +2 |
+
+- **捞回**：dense@20 候选池里根本没有 gold，hybrid 经 BM25 补进池、rerank 后进了 top-6。
+- **挤占**：dense@20 → rerank 本来命中 top-6，加了 BM25 候选后被顶出 top-6。
+
+### 结论：不进阶段二
+
+1. **没有反超，最好只打平。** 唯一追平 dense@40（0.9000）的配置是 `ascii-only N=15`，rerank 池均值 39.3
+   —— 与其说"用 BM25 精准补 20 条"，不如说把候选池从 28.9 扩到 39.3，只是"扩池"的另一种写法。设想中的
+   "回 k=20 再靠 BM25 反超"没有发生。
+2. **jieba 分词零贡献。** ascii-only 反而是最好的一档。原因：可捞回的案例几乎全是"中文 query → 英文 gold"，
+   真正起作用的是**译文 + ASCII 分词**，不是中文分词。本轮"这次做对了"的核心配料没有价值。
+3. **捞回 3 条 vs 挤占 1 条，且都不干净。** 3 条捞回里 2 条（task02 Rust 机制、task04 嵌入测试代表性样本）
+   是真问题、真收益；挤占的 1 条（task01"Base64 字符串是否含换行符"）本身是黄金集垃圾问题。dense@20 的
+   11 条硬漏检里 BM25 最多覆盖 4 条，其余 7 条是导航块 / base64 乱码 / 关键词云等标注缺陷，任何检索方式都救不了。
+4. **复现了 P1 的核心结论**：瓶颈在 reranker 提取阶段，不在检索广度。dense@40 和 hybrid@20 都停在 ~0.90，
+   再往上要动的是 reranker，不是加 sparse。
+
+**判定：Hybrid Sparse 二次验证同样负结果，阶段二（Qdrant 命名向量 + 稀疏向量 + IDF 维护 + jieba 依赖 +
+config 面）不启动。** `eval_hybrid.py` 作为实验记录保留，`jieba` / `rank_bm25` 不进生产依赖。
+
+### 如果真正的诉求是降 reranker 成本
+
+hybrid@20 `ascii N=15` 用 39.3 的池打平了 dense@40 的 57.3 池（rerank 输入 −31%、Recall 不变）——这是
+纯效率账，不是召回账。同样的效率有**一行配置**能拿到：把 `reranker_retrieve_k` 在 24~32 之间扫一遍取拐点，
+零新增基建。要压 reranker 成本应先做这个，不是上混合检索。
+
+---
+
+## Hybrid Sparse 阶段二（生产集成实测，2026-09-10）—— ❌ 生产路径零增益，flag 保持默认关
+
+阶段一虽为负结果，按指示仍完整实现了生产集成（config flag + `sparse_tokenizer.py` jieba+ascii
++ Qdrant 命名向量 dense/sparse + `Modifier.IDF` + `retrieve_evidence` 加性并集融合），默认 `HYBRID_ENABLED=false`。
+
+### 实测（`HYBRID_ENABLED=1` 走生产 `retrieve_evidence` 路径，冻结黄金集 120 题）
+
+| 指标 | dense@20 基线 | dense@40（当前生产） | **hybrid@20 生产路径** |
+|---|---|---|---|
+| rerank 后 Recall@6 | 0.883 | **0.900** | **0.883** |
+| 向量硬漏检 | 11 | 7 | 9 |
+| rerank 截断丢失 | 3 | 5 | **5** |
+
+**hybrid@20 生产路径 Recall@6 = 0.883，与不开混合检索的 dense@20 完全相同，比当前生产 dense@40 低 1.7pp。**
+
+### 为什么比阶段一离线的 0.8917 还低
+
+阶段一 `eval_hybrid.py` 用 `rank_bm25.BM25Okapi`，IDF 按**单任务语料**算；生产用 Qdrant `Modifier.IDF`，
+IDF 按**整个 collection**（7 天 TTL 窗口内多任务混合，eval 里是 12 个主题迥异的语料同库）算。IDF 权重不同
+→ sparse 排序不同 → 阶段一被 sparse 捞回的 `task02 Rust 机制`、`task04 代表性样本` 在生产 IDF 下没进
+sparse top-15，反而 `H200`（候选池 rank 36）等被拉进池子但过不了 reranker。
+
+### 结论：不进阶段三，flag 保持默认关
+
+- **两轮独立验证（阶段一离线加性并集、阶段二生产 Qdrant IDF）均无 Recall 增益**，生产路径甚至退回
+  dense@20 水平。sparse 确实把 2 条额外 gold 拉进候选池（H200、一条 RAG 题），但**全部被 reranker 截断**
+  ——第三次印证"瓶颈在 reranker 提取，不在检索广度"。
+- 代码保留，默认 `HYBRID_ENABLED=false` 时 collection schema / `store_chunks` / `search` 路径与之前**逐字节
+  不变**，对既有部署零影响。要复现负结果：`HYBRID_ENABLED=1` 重建 collection 后跑 `eval_retrieval.py`。
+- 若未来仍要推进：方向不是调 sparse，是解决 reranker 截断——扩 `reranker_top_k`、或候选池二阶段粗筛、
+  或换 reranker。这些与 hybrid 正交，应先单独验证。
+
+### 阶段二落地文件（供回溯 / 必要时回退）
+
+`app/core/config.py`（3 个 `hybrid_*` 配置）、`app/services/sparse_tokenizer.py`（新）、
+`app/services/vector_store.py`（命名向量 + `search_sparse` + schema 迁移检测）、
+`app/services/rag_service.py`（`build_evidence` 稀疏入库 + `_hybrid_merge`）、
+`app/graph/nodes.py`（`retriever_node` dense_k 分支）、`requirements.txt`（`jieba`）、`.env.example`、
+`benchmark/eval_retrieval.py`（`_index_corpus` 稀疏支持）。
+
+---
+
+## Hybrid Sparse 阶段三（融合方式对照 + reranker 截断深度，2026-09-10）—— ❌ 收口，flag 默认关
+
+阶段一/二确认 hybrid 无 Recall 增益。阶段三离线对照（`benchmark/eval_hybrid_fusion.py`，
+jieba+ascii 分词对齐生产，per-task BM25）回答最后两个问题。
+
+### Q1 换融合方式能否打平 dense@40？
+
+| 配置 | Recall@6 | Recall@8 | Recall@10 |
+|---|---|---|---|
+| D20（dense@20 基线） | 0.8833 | 0.9000 | 0.9000 |
+| **D40（dense@40，当前生产）** | **0.9000** | 0.9167 | 0.9333 |
+| 加性并集 ADD-{10,15,20,25} | 0.8917 | 0.9083 | 0.9250 |
+| RRF 融合 RRF-{15,25}（c=60，取融合后 top-30 送 rerank） | 0.8917 | 0.9167 | 0.9333 |
+
+**没有任何 hybrid 配置在 Recall@6 上打平 dense@40。** 加性并集与 RRF 在 @6 完全相同
+（0.8917），RRF 只在 @8/@10 尾部略好（追平 D40）。sparse_k 从 10 到 25 对 @6 零影响
+——**融合方式不是限制项**。
+
+### Q2 reranker 截断有多深？
+
+Recall@10 − Recall@6：D40 = **+3.3pp**（0.900→0.933），ADD-15 = +3.3pp，RRF-15 = +4.2pp。
+**dense@40 有 3.3pp 的 gold 卡在 rerank rank 7~10**——`reranker_top_k` 6→8 约 +1.7pp、
+6→10 约 +3.3pp，且这条杠杆与 hybrid 无关（对 D40 单独生效）。
+
+### 最终结论（四轮验证收口）
+
+1. **P1（2026-06 RRF）、阶段一（加性并集离线）、阶段二（生产 Qdrant IDF）、阶段三（融合方式
+   对照）——四轮均无 Recall@6 增益。** `HYBRID_ENABLED` 保持默认 `false`，不再开新验证维度。
+2. sparse 每轮都能把额外 gold 拉进候选池，但 reranker 一律截断——**瓶颈稳定复现在 rerank 阶段**。
+3. **正交的真实空间：reranker 截断**。数据已在手（D40 Recall@6/@8/@10 = 0.900/0.917/0.933），
+   缺的是"多送 2~4 个 chunk 给 analyst"对报告质量/faithfulness 的端到端影响——这是独立的
+   `reranker_top_k` 实验，与 hybrid 无关，应单独立项。
+4. e2e A/B（`run_benchmark.py`）**不跑**：没有值得 A/B 的 hybrid 配置（四轮离线全负），
+   e2e 只测吞吐/排队 + 报告长度/核查数，不是引用支持率的严谨度量，跑它验证一个离线全负的
+   特性不划算。
+
+### 阶段三新增文件
+
+`benchmark/eval_hybrid_fusion.py`（融合方式 + 截断深度对照，复用 `eval_hybrid.py` 工具函数）。
+
+---
+
+## 黄金集扩充后复核（2026-09-11）—— ✅ 锚点场景确认有效，结论修正
+
+### 背景
+
+用户质疑此前四轮否决的方法论：① 拿 dense@40 做基准不公平，该拿 dense@20；②
+黄金集构造规则强制"不照抄原句"，系统性排除了精确字面匹配场景（型号/DOI/法条编
+号），120 题里这类样本不到 2 条，样本量不足以下负向结论。
+
+第①点已用数据回应：生产路径 hybrid@20 = dense@20（0.883=0.883），不是基准选择
+问题，是真实无增益。第②点站得住，值得认真补——用户要求"更新黄金集，增开或扩充
+到 150 问左右"。
+
+### 怎么补的
+
+**不重新爬取**，复用已冻结的 12 个任务语料。正则扫描找精确锚点（产品型号/版本号
+/DOI/法条编号），要求锚点在本任务语料里**唯一出现**（严格单 gold，避免重犯"单
+gold 标注低估"）。人工逐条审核排除假阳性（引用编号残片、原始数据表格转储、URL/
+基金编号噪声——task08 电商语料尤其严重，客户/商品 ID 表格和真实型号长得像，直接
+对该任务关闭 product_code 识别）。最终 42 条候选，覆盖 10/12 个任务（02 Rust 对比、
+11 微服务两个任务确实没有这类内容，如实记录，不硬凑）。
+
+**生成问题时踩了一个坑**：复用原黄金集同款 LLM prompt（规则"不要照抄原句"），
+结果 35/42 条问题把锚点词本身也改写掉了——跟原黄金集犯的是同一个偏置，白扩。
+改用专门的锚点 prompt：保留"答案须出自原文"，但把"不要照抄"换成"必须原样保留
+至少一个指定锚点词"，生成后校验锚点词确实出现在问题文本里，不满足重试一次仍不
+满足则放弃该候选。改完 42/42 全部达标。
+
+追加后黄金集：120 → **162 题**，`benchmark/GoldenDataset/golden_set.json`
+新增条目带 `anchor_terms` 字段，供切分子集。新脚本：`build_golden_set_lexical.py`
+（扫描+生成）、`eval_anchor_subset.py`（离线 per-task BM25 版）、
+`eval_anchor_subset_prod.py`（生产 Qdrant sparse 版）。
+
+### 实测（生产路径，HYBRID_ENABLED=1，真实 Qdrant 命名向量 + sparse + Modifier.IDF）
+
+同一进程内对照，dense@40 侧临时关闭 hybrid 开关取纯 dense 基线，避免"两栏都被
+hybrid 污染"（过程中踩过这个坑，取值方式见 `eval_anchor_subset_prod.py` 注释）：
+
+| 子集 | n | dense@40（纯） | hybrid@20（生产） | 差值 |
+|---|---|---|---|---|
+| **锚点子集**（专门构造，产品型号/DOI/法条编号） | 42 | 0.8571 | **0.9762** | **+11.9pp** |
+| 原始子集（此前反复验证过的 120 题） | 120 | 0.9000 | 0.8833 | −1.7pp（与前四轮一致）|
+| 全体 | 162 | 0.8889 | 0.9074 | **+1.9pp** |
+
+离线理想化版本（`eval_anchor_subset.py`，per-task BM25Okapi）数字更夸张（锚点子集
+100%、+14.3pp）——生产版本因 collection 级 IDF 打了折扣，但**方向和量级都成立，
+不是理想化数字生产打回原形（阶段二那种情况）**。逐题看，dense@40 在锚点子集上的
+6 条漏检，5 条被 hybrid 救回，主要是 DOI 精确匹配题——这些查询词面上就带着 DOI/
+型号/条款号，dense 对这类字面精确匹配天然弱，sparse 直接命中。
+
+### 结论修正
+
+**此前"四轮否决、不再开新验证维度"的结论是在有偏样本上得出的，需要修正**：
+
+1. **hybrid 检索对"查询包含精确标识符"（产品型号/DOI/法条编号/版本号）这类场景
+   有真实、生产路径验证过的增益（+11.9pp）**。这不是理想化实验室数字，是用会
+   上线的代码路径（Qdrant 命名向量 + sparse + Modifier.IDF）测出来的。
+2. **对通用自然语言研究问题仍是净负（−1.7pp），与此前四轮完全一致**——原来的
+   否决结论对这部分人群依然成立，没有被推翻。
+3. net 在混合人群（本次 162 题，锚点占比 26%）上是 **+1.9pp**，但这个占比是
+   "我能找到多少条锚点样本"决定的，不代表真实生产查询分布——不能直接当作
+   "该不该默认开启"的依据。
+
+### 建议：查询自适应触发，而非全局开关
+
+blanket 打开 `HYBRID_ENABLED` 会把 −1.7pp 的regression 带到所有查询上；只在
+"查询像是在问一个具体标识符"时才触发 hybrid，能拿到 +11.9pp 增益、且不动通用
+查询的路径。检测规则可以很轻量（复用本次扫描用的锚点正则：产品型号/版本号/DOI/
+法条编号模式），命中即对这条子问题单独启用 hybrid 检索，未命中走纯 dense——这是
+下一步实现方向，与本项目已有的 `VERTICAL_ROUTES` 域驱动路由是同一设计哲学
+（按查询特征路由，不是全局一刀切）。
+
+---
+
+## Hybrid Sparse 生产落地：查询自适应触发（2026-09-11）—— ✅ 已上线
+
+### 从"全局开关"改成"按查询门控"
+
+黄金集扩充复核证明了 hybrid 对锚点查询有效（+11.9pp），但生产路径实测用的是
+`HYBRID_ENABLED=1` 全局打开——这会让**所有**查询（含不含锚点的）都改用
+`hybrid_dense_k=20` 的 dense 预算，代价是原始 120 题子集从纯 dense@40 的 0.9000
+掉到 0.8833（−1.7pp）。**这个 −1.7pp 不是"混合检索本身对通用查询有害"，是"全局
+开关误伤了不该收窄预算的查询"**——两者是不同的问题，此前混在一起说成"通用查询
+上净负"不够精确。
+
+修正为查询自适应触发：新增 `app/services/sparse_tokenizer.py::has_lexical_anchor()`，
+判断一条查询（含 P-XLing 译文）是否含精确标识符（产品型号/版本号/DOI/法条编号）。
+`rag_service.retrieve_evidence` 只有命中才触发 dense+sparse 加性并集、dense 预算
+收窄到 `hybrid_dense_k`；未命中的查询完全走原有纯 dense 路径，`top_k` 用调用方
+原样传入的预算（`retriever_node` 统一传 `reranker_retrieve_k`），不受 hybrid 开关
+影响。`HYBRID_ENABLED` 现在只决定"基础设施要不要打开"（Qdrant sparse 命名向量、
+ingest 要不要算 BM25 向量），不再直接等于"这次检索会不会用 sparse"。
+
+**正则踩坑**：判定函数最初用 `\b` 做词边界，实测 42 条锚点验证题里 **20 条漏检**
+——Python `\b` 按 Unicode `\w` 判断词边界，中文字符也算 `\w`，中文技术问答里英文/
+数字和中文经常直接粘连不留空格（"INT16量化""Article 9将""DOI为10.xxx的论文"，正
+是本轮调研最早诊断出的"H200相比"无空格模式），`\b` 在这种交界处不成立、整条正则
+失配。改用 `(?<![A-Za-z0-9])` / `(?![A-Za-z0-9])` 负向环视后 42/42 全部正确触发，
+连最初的 motivating case（"英伟达最新旗舰GPU H200相比前代H100"）也一并修复
+——此前用 `\b` 的版本这条都测不出来。
+
+### 最终验证（完全模拟 `retriever_node` 调用方式，不手动传参，门控全交给内部决定）
+
+| 子集 | n | Recall@6 |
+|---|---|---|
+| 锚点子集 | 42 | **0.9762**（vs 纯 dense@40 基线 0.8571，**+11.9pp**）|
+| 原始子集（此前四轮验证过的 120 题） | 120 | **0.9000**（= 纯 dense@40 基线，**零回归**，不再是全局开关版本的 0.8833）|
+| 全体 | 162 | **0.9198** |
+
+查询自适应触发下，锚点查询吃满增益、非锚点查询零损失——这是全局开关做不到的。
+
+### 生产配置
+
+`HYBRID_ENABLED` 默认改为 `true`（`app/core/config.py` / `.env.example` / `.env`）。
+`app/graph/nodes.py::retriever_node` 简化：不再按 `hybrid_enabled` 分支传
+`retrieve_k`，统一传 `reranker_retrieve_k`，门控和预算收窄全部下沉到
+`retrieve_evidence` 内部。

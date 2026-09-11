@@ -48,6 +48,9 @@ tenacity>=9.0.0
 # 镜像能保持轻量的前提（EMBEDDING_PROVIDER=fastembed 时本进程即可算向量）。
 qdrant-client>=1.12.0
 fastembed>=0.5.0
+# jieba：混合检索（HYBRID_ENABLED=1）sparse 侧的中文分词。纯 Python、无 torch，
+# worker 可安全 import。默认关闭时不会被 import。
+jieba>=0.42.1
 
 # === Cache & Queue ===
 redis>=5.0.0

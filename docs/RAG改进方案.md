@@ -32,8 +32,10 @@ chunk (size=800, overlap=200) → bge-m3 embedding (1024d, GPU) → Qdrant (task
 
 | # | 问题 | 方向 |
 |---|---|---|
-| Q3 | 纯向量检索，专有名词/版本号无法精确命中 | Hybrid Search（Qdrant RRF 融合 dense + sparse），+100ms |
+| ~~Q3~~ | ~~纯向量检索，专有名词/版本号无法精确命中 → Hybrid Search~~ | **已上线，见 §六「Hybrid Sparse」**：查询含精确标识符（型号/DOI/法条编号）时按需触发 hybrid，生产验证 +11.9pp；未命中的查询零回归 |
 | Q4 | 评估循环验证：bge-m3 同时用于索引和评估，差值 <0.02 | LLM Judge 逐 chunk 判相关性 |
+| Q7 | reranker 截断：dense@40 有 3.3pp gold 卡在 rerank rank 7~10（`reranker_top_k` 6→8 约 +1.7pp）| 独立立项：测「多送 2~4 chunk 给 analyst」对报告质量/faithfulness 的端到端影响 |
+| ~~Q8~~ | ~~hybrid 检索按查询特征自适应触发~~ | **已实现并默认开启**：`sparse_tokenizer.has_lexical_anchor()` 判定，命中才对该子问题单独触发 hybrid，与 `VERTICAL_ROUTES` 域路由同一设计哲学 |
 | Q5 | 阈值 0.45 形同虚设，实测有效下界 ≈0.65 | 待调整 |
 | Q6 | Chunk Utilization Rate（引用 URL / 检索 URL）未提取 | 成本极低、诊断价值高，**优先做** |
 | — | chunk_size=800 ≈ 400 token，远低于 bge-m3 上限 8192；HTML 残留标签污染 | 待验证是否值得调 |
@@ -110,6 +112,69 @@ LLM 调用失败或产出为空 → 静默降级为原始 query。
 ### HyDE + Keyword 融合、Keyword 单独（2026-07-06）
 
 见 §五。Keyword 单独 +0.8pp 增益偏低，且与 HyDE 恢复的 miss **不重叠**——看似互补，融合却因噪声净亏。
+
+### Hybrid Sparse 混合检索（BM25 + RRF / 加性并集）：五轮验证，结论从"否决"修正为"场景化有效"（2026-06～09）
+
+动机同 §三 Q3：dense embedding 对专有名词、版本号、数字+单位的字面区分力弱，设想加 BM25
+sparse 补强。前四轮独立验证（详见 `benchmark/GoldenDataset/improvement_plan.md` 各节记录）：
+
+| 轮次 | 方案 | 冻结黄金集 Recall@6 |
+|---|---|---|
+| P1（2026-06） | fastembed `Qdrant/bm25` + Qdrant 原生 `FusionQuery(RRF)` | 0.850（dense 基线 0.858，**−0.8pp**）|
+| 阶段一（2026-09） | 加性并集融合（dense 候选原样保留，sparse 只追加）+ jieba 中文分词 + P-XLing 译文喂 sparse，离线 per-task BM25 | 最好 0.8917（jieba+ascii）/ 0.9000（ascii-only），**均未超 dense@40 的 0.9000** |
+| 阶段二（2026-09） | 上面方案的生产集成（Qdrant 命名向量 + `Modifier.IDF` collection 级 IDF）| 0.883（= dense@20 基线，**低于 dense@40 1.7pp**）|
+| 阶段三（2026-09） | 融合方式对照：加性并集 vs RRF，sparse_k 10~25 | 全部 0.8917，**无一打平 dense@40** |
+
+四轮共同根因：瓶颈稳定复现在 reranker 提取阶段，不在检索广度——sparse 能把额外 gold 拉进
+候选池，但 reranker 一律截断在 top-6 之外，且这些 gold 在纯 dense@40 下本就已在候选池内。
+
+**但四轮用的黄金集本身有偏**：构造规则强制"不要照抄原句"，系统性排除了"查询含精确标识符"
+这类场景（120 题里不到 2 条），四轮否决的其实只是"通用自然语言问题下 hybrid 无增益"，没有
+真正测过 hybrid 设计初衷要解决的场景。
+
+#### 第五轮（2026-09-11）：扩充黄金集补上精确锚点场景，生产路径验证有效
+
+不重新爬取，复用已冻结语料，扫描出 42 条含唯一精确锚点（产品型号/版本号/DOI/法条编号）的
+chunk，专门生成"问题里必须原样保留锚点词"的问题（黄金集 120→162 题，新增条目带
+`anchor_terms` 字段）。用**生产路径**（`HYBRID_ENABLED=1`，真实 Qdrant 命名向量 + sparse +
+`Modifier.IDF`，不是理想化 per-task BM25）分子集验证：
+
+| 子集 | n | dense@40（纯） | hybrid@20（生产） | 差值 |
+|---|---|---|---|---|
+| **锚点子集**（精确标识符查询） | 42 | 0.8571 | **0.9762** | **+11.9pp** |
+| 原始子集（此前四轮验证过的 120 题） | 120 | 0.9000 | 0.8833 | −1.7pp（与前四轮一致）|
+| 全体 | 162 | 0.8889 | 0.9074 | +1.9pp |
+
+上表的 −1.7pp 是 `HYBRID_ENABLED=1` **全局打开**时测的——这会让不含锚点的查询也被
+压缩到 `hybrid_dense_k=20` 的 dense 预算，−1.7pp 是"全局开关误伤"，不是"混合检索
+对通用查询有害"，两者不是一回事。
+
+#### 落地：查询自适应触发（2026-09-11 已上线）
+
+`app/services/sparse_tokenizer.py::has_lexical_anchor()` 判定一条查询（含 P-XLing
+译文）是否含精确标识符，命中才触发 dense+sparse 加性并集 + dense 预算收窄；未命中
+完全走原有纯 dense 路径、预算不变（`retriever_node` 统一传 `reranker_retrieve_k`，
+不再按 `hybrid_enabled` 分支传参）。**踩坑**：判定正则最初用 `\b` 做边界，Python
+`\b` 按 Unicode `\w` 判断、中文字符也算 `\w`，中文问答里英文/数字和中文经常直接
+粘连不留空格（"INT16量化""H200相比"），`\b` 在交界处不成立、42 条锚点验证题里
+20 条漏检。改用 `(?<![A-Za-z0-9])`/`(?![A-Za-z0-9])` 负向环视后 42/42 全部正确
+触发，连本轮最初的 motivating case（"H200相比前代H100"）也一并修复。
+
+完全模拟 `retriever_node` 调用方式的最终验证：
+
+| 子集 | n | Recall@6 |
+|---|---|---|
+| 锚点子集 | 42 | **0.9762**（vs 纯 dense@40 基线 0.8571，**+11.9pp**）|
+| 原始子集（此前四轮验证过的 120 题） | 120 | **0.9000**（= 纯 dense@40 基线，**零回归**）|
+| 全体 | 162 | **0.9198** |
+
+查询自适应触发下，锚点查询吃满增益、非锚点查询零损失。`HYBRID_ENABLED` 默认改为
+`true`（`config.py` / `.env.example` / `.env`），关闭时 collection schema /
+`store_chunks` / `search` 路径逐字节不变。`app/services/sparse_tokenizer.py`、
+`benchmark/eval_hybrid.py`、`benchmark/eval_hybrid_fusion.py`、
+`benchmark/build_golden_set_lexical.py`、`benchmark/eval_anchor_subset*.py` 是这条
+线的全部产物，详细过程见 `benchmark/GoldenDataset/improvement_plan.md`
+「Hybrid Sparse 生产落地」。
 
 ---
 

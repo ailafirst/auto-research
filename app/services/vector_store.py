@@ -27,6 +27,9 @@ class VectorStoreService:
         self.collection_name = settings.qdrant_collection
         self.embedding_dim = settings.embedding_dim
         self._collection_initialized = False
+        # 混合检索：命名向量 dense + sparse。关闭时保持原「单个匿名向量」schema
+        # 不变，不影响既有部署；开启需重建 collection（见 config.hybrid_enabled 注释）。
+        self._hybrid = settings.hybrid_enabled
 
         # 构造期不做 I/O：远程可达性在首次 _ensure_collection 时才知道，不可达则就地
         # 回退内存模式。qdrant_mode 显式选择而非「配了 url 就用远程」，避免历史部署
@@ -75,15 +78,24 @@ class VectorStoreService:
                 for c in collections.collections
             )
 
+            if exists and self._hybrid and not await self._is_hybrid_schema():
+                # 旧 schema（匿名向量）遇到 hybrid 开启：必须重建，否则 upsert 命名
+                # 向量会静默失败（CLAUDE.md 约定 5：任务跑完、报告没有任何引用）。
+                logger.warning(
+                    "collection %s 是非 hybrid schema，hybrid_enabled=True 需重建"
+                    "（旧向量丢弃，下个任务重新 ingest）", self.collection_name,
+                )
+                await self.client.delete_collection(self.collection_name)
+                exists = False
+
             if not exists:
                 await self.client.create_collection(
                     collection_name=self.collection_name,
-                    vectors_config=models.VectorParams(
-                        size=self.embedding_dim,
-                        distance=models.Distance.COSINE,
-                    ),
+                    **self._collection_config(),
                 )
-                logger.info("向量集合已创建: %s", self.collection_name)
+                logger.info(
+                    "向量集合已创建: %s（hybrid=%s）", self.collection_name, self._hybrid,
+                )
             else:
                 logger.info("向量集合已存在: %s", self.collection_name)
 
@@ -93,6 +105,38 @@ class VectorStoreService:
         except Exception as exc:
             logger.error("Qdrant 初始化失败: %s", exc)
             raise VectorStoreError(f"Qdrant 初始化失败: {exc}") from exc
+
+    # dense 命名向量的名字。hybrid 关闭时用匿名向量（query/upsert 时 using=None）。
+    _DENSE = "dense"
+    _SPARSE = "sparse"
+
+    def _collection_config(self) -> dict:
+        """create_collection 的 vectors_config / sparse_vectors_config。"""
+        dense = models.VectorParams(
+            size=self.embedding_dim, distance=models.Distance.COSINE,
+        )
+        if not self._hybrid:
+            return {"vectors_config": dense}
+        return {
+            "vectors_config": {self._DENSE: dense},
+            # IDF 由 Qdrant 按 collection 文档频率在线计算，文档侧只存 BM25 TF 权重。
+            "sparse_vectors_config": {
+                self._SPARSE: models.SparseVectorParams(modifier=models.Modifier.IDF),
+            },
+        }
+
+    async def _is_hybrid_schema(self) -> bool:
+        """现有 collection 是否已是命名向量 + sparse 的 hybrid schema。"""
+        try:
+            info = await self.client.get_collection(self.collection_name)
+            vectors = info.config.params.vectors
+            has_named_dense = isinstance(vectors, dict) and self._DENSE in vectors
+            sparse = info.config.params.sparse_vectors
+            has_sparse = bool(sparse) and self._SPARSE in sparse
+            return has_named_dense and has_sparse
+        except Exception as exc:
+            logger.warning("读取 collection schema 失败，按需重建: %s", exc)
+            return False
 
     async def _ensure_payload_indexes(self) -> None:
         """建 payload 索引（幂等，已存在时 Qdrant 直接返回成功）。
@@ -118,13 +162,23 @@ class VectorStoreService:
                 # 索引建不上不该阻断写入——检索和删除只是变慢，不是不可用
                 logger.warning("payload 索引 %s 创建失败（将退化为全扫描）: %s", field, exc)
 
-    async def store_chunks(self, chunks: list[EvidenceChunk],
-                           embeddings: list[list[float]]) -> list[str]:
-        """存储切片及其向量到 Qdrant。"""
+    async def store_chunks(
+        self,
+        chunks: list[EvidenceChunk],
+        embeddings: list[list[float]],
+        sparse_vectors: list[tuple[list[int], list[float]]] | None = None,
+    ) -> list[str]:
+        """存储切片及其向量到 Qdrant。
+
+        sparse_vectors: 仅 hybrid 模式传入，与 chunks 一一对应的 (indices, values)。
+        """
         await self._ensure_collection()
 
         if len(chunks) != len(embeddings):
             raise VectorStoreError("chunks 与 embeddings 数量不匹配")
+        if sparse_vectors is not None and len(sparse_vectors) != len(chunks):
+            raise VectorStoreError("chunks 与 sparse_vectors 数量不匹配")
+        use_sparse = self._hybrid and sparse_vectors is not None
 
         vector_ids: list[str] = []
         points: list[models.PointStruct] = []
@@ -133,13 +187,24 @@ class VectorStoreService:
         # 整数 payload 索引的范围查询最直接，也不受时区/格式解析影响。
         now_ts = int(time.time())
 
-        for chunk, vector in zip(chunks, embeddings):
+        for i, (chunk, vector) in enumerate(zip(chunks, embeddings)):
             point_id = str(uuid.uuid4())
             vector_ids.append(point_id)
 
+            if use_sparse:
+                idx, val = sparse_vectors[i]
+                point_vector: Any = {
+                    self._DENSE: vector,
+                    self._SPARSE: models.SparseVector(indices=idx, values=val),
+                }
+            elif self._hybrid:
+                point_vector = {self._DENSE: vector}
+            else:
+                point_vector = vector
+
             points.append(models.PointStruct(
                 id=point_id,
-                vector=vector,
+                vector=point_vector,
                 payload={
                     "task_id": chunk.task_id,
                     "source_id": chunk.source_id,
@@ -201,26 +266,59 @@ class VectorStoreService:
             response = await self.client.query_points(
                 collection_name=self.collection_name,
                 query=query_vector,
+                using=self._DENSE if self._hybrid else None,
                 limit=k,
                 query_filter=query_filter,
                 with_payload=True,
             )
-
-            return [
-                {
-                    "score": r.score,
-                    "text": r.payload.get("text", ""),
-                    "url": r.payload.get("url", ""),
-                    "title": r.payload.get("title", ""),
-                    "chunk_index": r.payload.get("chunk_index", 0),
-                    "source_id": r.payload.get("source_id", ""),
-                }
-                for r in response.points
-            ]
+            return [self._hit(r) for r in response.points]
 
         except Exception as exc:
             logger.error("Qdrant 检索失败: %s", exc)
             raise VectorStoreError(f"向量检索失败: {exc}") from exc
+
+    async def search_sparse(
+        self,
+        indices: list[int],
+        values: list[float],
+        task_id: str | None = None,
+        top_k: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """BM25 稀疏检索（仅 hybrid 模式）。IDF 由 collection 的 Modifier.IDF 施加。"""
+        if not self._hybrid or not indices:
+            return []
+        await self._ensure_collection()
+        k = top_k or settings.hybrid_sparse_k
+
+        query_filter = None
+        if task_id:
+            query_filter = models.Filter(must=[models.FieldCondition(
+                key="task_id", match=models.MatchValue(value=task_id),
+            )])
+        try:
+            response = await self.client.query_points(
+                collection_name=self.collection_name,
+                query=models.SparseVector(indices=indices, values=values),
+                using=self._SPARSE,
+                limit=k,
+                query_filter=query_filter,
+                with_payload=True,
+            )
+            return [self._hit(r) for r in response.points]
+        except Exception as exc:
+            logger.error("Qdrant 稀疏检索失败: %s", exc)
+            raise VectorStoreError(f"稀疏检索失败: {exc}") from exc
+
+    @staticmethod
+    def _hit(r: Any) -> dict[str, Any]:
+        return {
+            "score": r.score,
+            "text": r.payload.get("text", ""),
+            "url": r.payload.get("url", ""),
+            "title": r.payload.get("title", ""),
+            "chunk_index": r.payload.get("chunk_index", 0),
+            "source_id": r.payload.get("source_id", ""),
+        }
 
     async def delete_task_chunks(self, task_id: str) -> int:
         """删除某任务的所有 Chunk。"""

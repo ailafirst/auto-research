@@ -47,10 +47,49 @@ class Settings(BaseSettings):
     # 爬虫补抓（爬虫有 30s 超时，稳健）。配额紧张/基准测试时可降级为 basic。
     tavily_search_depth: Literal["basic", "advanced"] = "advanced"
     tavily_include_raw_content: bool = True
-    # 学术源双路（方案①）：每次查询在通用搜索外，再并发一路限定学术白名单域的 Tavily
-    # 检索并合并，让研究/综述源进入候选池；相关性交给 reranker 自过滤（统一生效，不猜
-    # 问题类型）。仅 Tavily 路生效。详见 docs/检索与证据.md。
+    # 垂直源双路（方案①，最初只有学术一路，故名 academic_*）：查询在通用搜索外，再并发
+    # 一路限定对应垂直白名单域的 Tavily 检索并合并，让研究/综述源进入候选池；相关性交给
+    # reranker 自过滤。仅 Tavily 路生效。全局总开关——名字是历史遗留，现在管的是全部垂直
+    # 路由（academic/business/legal/policy），是否触发某一路还要看 research_strategy.domain
+    # 是否命中 app/services/search_service.py::VERTICAL_ROUTES（P0 域驱动路由，见
+    # docs/AnySearch技术原理与项目借鉴调研.md、docs/检索路由蓝图.md）。关掉此项等于禁用
+    # 所有垂直路由，不管 domain 判断结果如何。详见 docs/检索与证据.md。
     academic_search_enabled: bool = True
+    # CrossRef / arXiv 进程级并发闸门（见 docs/检索路由蓝图.md §9.18）：12 题基准在
+    # 真实并发下测出两个源大量 429（CrossRef 41/43、arXiv 68/68）——免费匿名池对
+    # 突发并发容忍度很低，不是账号级限速。信号量压低"同一时刻在飞的请求数"，不减少
+    # 总请求量，但把请求错峰摊开，降低撞限速的概率。arXiv 官方使用须知明确要求
+    # "不超过每 3 秒 1 个请求"，比 CrossRef 更严格，因此给它更保守的上限。
+    crossref_max_concurrency: int = 3
+    arxiv_max_concurrency: int = 2
+    # CrossRef / arXiv 跨进程全局速率限制（Redis 令牌桶，模式同 llm_rate_limit_*，
+    # 见 docs/检索路由蓝图.md §9.21/§9.22）。上面的 asyncio.Semaphore 只在单进程内生效，
+    # 多 worker 部署下各 worker 独立持有一份，聚合并发仍会超限；且两个源的限速机制
+    # 本质不同，本地信号量管不住：
+    #   - arXiv 实测是"短时间窗口累计请求数"型限速（约 20 个请求/7 秒即触发），并发
+    #     再低、只要单位时间内发得够多照样撞线；触发后冷却期实测约 5 分钟，代价很高，
+    #     因此速率对齐 arXiv 官方使用须知"不超过每 3 秒 1 个请求"，不留突发余量。
+    #   - CrossRef 实测是"瞬时并发连接数"型限速（≤8 个稳定成功，12 个起零星失败，
+    #     20 个近半失败），令牌桶主要是给多 worker 场景兜底，留数倍安全边际。
+    # Redis 不可用时 acquire 直接放行（降级安全），由上面的本地信号量继续兜底。
+    arxiv_rate_limit_enabled: bool = True
+    arxiv_rate_limit_per_sec: float = 0.33
+    arxiv_rate_burst: int = 1
+    # RedisRateLimiter.acquire() 默认 max_wait=30s，超时会放弃排队直接放行——对 arXiv
+    # 这种 0.33/s 的低速率不够用：一个 deep 任务里同时冒出十几个 academic 查询很正常，
+    # 排到队尾按 0.33/s 算轻松超过 30s，默认值会让排在后面的请求提前放行、变相突发，
+    # 正好撞回“短窗口累计请求数超限”这个已确认的根因。拉长到 120s，宁可任务慢一点
+    # 也不再制造新的突发。
+    arxiv_rate_limit_max_wait: float = 120.0
+    # 熔断冷却窗口（秒）：见 docs/检索路由蓝图.md §9.25——分速率压力测试确认 0.33/s
+    # 稳态节奏本身没问题，但一旦真撞进受限状态，单流串行、每次都规规矩矩等 ≥3 秒，
+    # 连续 240 秒、80 个请求全部失败，冷却期是硬下限，拼节奏换不回时间；实测冷却期
+    # 恢复约 298 秒（约 5 分钟）。收到第一次 429 后直接熔断这么久，跳过 arXiv 只退回
+    # CrossRef，省下这段时间里注定失败的排队等待成本；数值取比实测值稍大的整数留边际。
+    arxiv_circuit_breaker_cooldown: float = 360.0
+    crossref_rate_limit_enabled: bool = True
+    crossref_rate_limit_per_sec: float = 3.0
+    crossref_rate_burst: int = 3
 
     # --- Qdrant ---
     # memory=进程内实例（零基础设施，单进程内跑完一个任务够用，为历史默认）；
@@ -88,6 +127,30 @@ class Settings(BaseSettings):
     # 翻译走独立本地 MT（opus-mt，~20ms/题），不占主 LLM 并发池。
     xling_enabled: bool = True
     translation_model: str = "Helsinki-NLP/opus-mt-zh-en"
+
+    # --- 混合检索（dense + BM25 稀疏，加性并集融合，按查询自适应触发）---
+    # 五轮验证的结论：对"通用研究问题"混合检索无增益甚至轻微负（−1.7pp），但对
+    # "查询含精确标识符"（产品型号/版本号/DOI/法条编号）场景生产路径实测 +11.9pp
+    # （0.857→0.976，见 benchmark/GoldenDataset/improvement_plan.md「黄金集扩充后
+    # 复核」）。因此不是全局开关式的"混合 vs 纯 dense"，是**按查询门控**：
+    # sparse_tokenizer.has_lexical_anchor(query) 命中才触发，未命中的查询在
+    # rag_service.retrieve_evidence 里完全走原有纯 dense 路径、预算不变——这个字段
+    # 只决定"基础设施要不要打开"（Qdrant collection 建不建 sparse 命名向量、ingest
+    # 要不要算 BM25 向量），不直接等于"这次检索会不会用 sparse"。
+    # 打开后：
+    #   1. Qdrant collection 改为命名向量（dense + sparse），schema 变更需重建
+    #      collection——旧数据（7 天 TTL、任务级）会丢，下个任务重新 ingest。
+    #   2. sparse 侧用 app/services/sparse_tokenizer.py 的 jieba+ascii 分词 + BM25
+    #      TF 权重，IDF 由 Qdrant 的 Modifier.IDF 按 collection 文档频率在线计算。
+    #   3. 命中锚点的查询，中文 query 的 P-XLing 英译也喂给 sparse。
+    hybrid_enabled: bool = True
+    # 命中锚点时 dense 侧候选数（未命中锚点的查询不受此项影响，仍用
+    # reranker_retrieve_k）。以 dense@20 为基线，回到 20 让 sparse 有补充空间，
+    # 同时把送进 reranker 的候选池从 dense@40 的均值 57 压到 ~39。
+    hybrid_dense_k: int = 20
+    # sparse 侧取 top-N 追加到候选池。网格 {5,10,15} 里 N=15 综合表现最好。
+    # 加性并集下 sparse 只"加"候选、不顶替 dense，故 N 偏大风险可控。
+    hybrid_sparse_k: int = 15
 
     # --- 模型服务化（可选，独立 FastAPI 进程集中装载 embed/rerank/translate）---
     # 非空时，worker 全部通过 HTTP 调用模型服务，进程内不 import torch/transformers，

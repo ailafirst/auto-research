@@ -389,7 +389,7 @@ class RAGService:
 
             # 过滤 NaN 向量（空文本或零范数文本会产生 NaN，Qdrant 写入时会报错）
             import math
-            valid = [(c, e) for c, e in zip(all_chunks, embeddings)
+            valid = [(c, t, e) for c, t, e in zip(all_chunks, texts, embeddings)
                      if e and not any(math.isnan(v) for v in e)]
             if len(valid) < len(all_chunks):
                 logger.warning("过滤 %d 个 NaN 向量（共 %d chunks）",
@@ -397,10 +397,20 @@ class RAGService:
             if not valid:
                 logger.warning("所有向量均为 NaN，跳过入库")
                 return all_chunks
-            valid_chunks, valid_embeddings = zip(*valid)
+            valid_chunks = [c for c, _, _ in valid]
+            valid_texts = [t for _, t, _ in valid]
+            valid_embeddings = [e for _, _, e in valid]
+
+            sparse_vectors = None
+            if settings.hybrid_enabled:
+                from app.services.sparse_tokenizer import get_bm25_encoder
+                encoder = get_bm25_encoder()
+                lengths = [encoder.doc_length(t) for t in valid_texts]
+                avgdl = sum(lengths) / len(lengths) if lengths else 1.0
+                sparse_vectors = [encoder.encode_document(t, avgdl) for t in valid_texts]
 
             vector_ids = await self.vector_store.store_chunks(
-                list(valid_chunks), list(valid_embeddings)
+                valid_chunks, valid_embeddings, sparse_vectors,
             )
             for chunk, vid in zip(valid_chunks, vector_ids):
                 chunk.vector_id = vid
@@ -429,6 +439,15 @@ class RAGService:
         跨语言：settings.xling_enabled 且 query 含中文、调用方未显式传 extra_queries
         时，自动用本地 MT 把 query 译为英文作为第二路。多路各检索 top_k 后按 cid 合并
         取最高分，让英文 gold 也能进候选池（基准实测 Recall@6 0.858→0.892）。
+
+        混合检索按查询自适应触发（不是全局开关）：settings.hybrid_enabled 打开时，
+        只有这条查询（含译文）命中 sparse_tokenizer.has_lexical_anchor（含产品型号/
+        版本号/DOI/法条编号）才会额外做 dense+sparse 加性并集，dense 侧预算同时收窄
+        到 hybrid_dense_k（sparse 补回候选，池子不需要 dense 单独顶到 reranker_retrieve_k）。
+        不含锚点的查询完全走原有纯 dense 路径、top_k 不变——生产路径实测：含锚点查询
+        hybrid 比 dense@40 高 11.9pp，不含锚点查询 hybrid 反而 −1.7pp，这正是必须按
+        查询门控、不能全局打开的原因（见 benchmark/GoldenDataset/improvement_plan.md
+        「黄金集扩充后复核」）。
         """
         try:
             extras = list(extra_queries or [])
@@ -439,34 +458,76 @@ class RAGService:
                     extras.append(en)
 
             queries = [query] + [q for q in extras if q]
+
+            use_hybrid = False
+            if settings.hybrid_enabled:
+                from app.services.sparse_tokenizer import has_lexical_anchor
+                use_hybrid = any(has_lexical_anchor(q) for q in queries)
+            dense_k = settings.hybrid_dense_k if use_hybrid else top_k
+
             vectors = await self._embed(queries)
             if not vectors or not vectors[0]:
                 return []
 
             if len(queries) == 1:
-                return await self.vector_store.search(
-                    query_vector=vectors[0],
-                    task_id=task_id,
-                    top_k=top_k,
+                dense_hits = await self.vector_store.search(
+                    query_vector=vectors[0], task_id=task_id, top_k=dense_k,
+                )
+            else:
+                # 多 query：各路 dense 检索后按 cid 合并取最高分
+                merged: dict[str, dict[str, Any]] = {}
+                for vec in vectors:
+                    if not vec:
+                        continue
+                    hits = await self.vector_store.search(
+                        query_vector=vec, task_id=task_id, top_k=dense_k,
+                    )
+                    for h in hits:
+                        key = f"{h.get('source_id', '')}#{h.get('chunk_index', 0)}"
+                        if key not in merged or h["score"] > merged[key]["score"]:
+                            merged[key] = h
+                dense_hits = sorted(
+                    merged.values(), key=lambda x: x["score"], reverse=True,
                 )
 
-            # 多 query：各路 dense 检索后按 cid 合并取最高分
-            merged: dict[str, dict[str, Any]] = {}
-            for vec in vectors:
-                if not vec:
-                    continue
-                hits = await self.vector_store.search(
-                    query_vector=vec, task_id=task_id, top_k=top_k,
-                )
-                for h in hits:
-                    key = f"{h.get('source_id', '')}#{h.get('chunk_index', 0)}"
-                    if key not in merged or h["score"] > merged[key]["score"]:
-                        merged[key] = h
-            return sorted(merged.values(), key=lambda x: x["score"], reverse=True)
+            if not use_hybrid:
+                return dense_hits
+            return await self._hybrid_merge(query, queries, task_id, dense_hits)
 
         except Exception as exc:
             logger.error("证据检索失败: %s", exc)
             return []
+
+    async def _hybrid_merge(
+        self,
+        query: str,
+        queries: list[str],
+        task_id: str | None,
+        dense_hits: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """加性并集融合：dense 候选原样保留，BM25 稀疏检索只追加 dense 没有的 cid。
+
+        阶段一实测结论：sparse 不做 RRF 全局重排（那会把 dense 已召回的 gold 顶掉，
+        是上一次 P1 的失败主因），只作为候选池的补充，最终排序交给 reranker。
+        """
+        from app.services.sparse_tokenizer import get_bm25_encoder
+
+        # sparse 侧 query = 原文 + P-XLing 英译，合并分词。译文对"中文 query→英文
+        # gold"是关键（阶段一：可捞回案例几乎全是这一类）。
+        idx, val = get_bm25_encoder().encode_query(" \n".join(queries))
+        sparse_hits = await self.vector_store.search_sparse(
+            indices=idx, values=val, task_id=task_id,
+            top_k=settings.hybrid_sparse_k,
+        )
+        if not sparse_hits:
+            return dense_hits
+
+        seen = {f"{h.get('source_id', '')}#{h.get('chunk_index', 0)}" for h in dense_hits}
+        added = [h for h in sparse_hits
+                 if f"{h.get('source_id', '')}#{h.get('chunk_index', 0)}" not in seen]
+        if added:
+            logger.info("hybrid: dense %d + sparse 追加 %d", len(dense_hits), len(added))
+        return dense_hits + added
 
 
 _rag_service_singleton: RAGService | None = None
