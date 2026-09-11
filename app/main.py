@@ -138,7 +138,7 @@ async def lifespan(app: FastAPI):
 
 # 单一版本号来源。发版时只改这一处 —— 之前 Swagger 和 `/` 各写死一份，
 # 从 v0.1.0 一路停在 0.1.0 没人发现。与 pyproject.toml 的 version 保持一致。
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.3.5"
 
 app = FastAPI(
     title="Deep Research Agent",
