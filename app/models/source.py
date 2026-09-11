@@ -21,6 +21,18 @@ class SearchResult(BaseModel):
     raw_content: str | None = None       # 完整页面正文，可跳过爬虫
     tavily_score: float | None = None    # 查询相关度 0-1
     query_answer: str | None = None      # Tavily 对该次查询的摘要答案
+    # 检索来源元数据（P0：域驱动路由 + 可追溯性，见 docs/AnySearch技术原理与项目借鉴调研.md §6）
+    provider: str = ""       # 实际服务本次查询的引擎："tavily" / "duckduckgo" / "crossref" / "arxiv"
+    search_route: str = "general"  # 命中的检索路由："general"（通用）/ "academic"（学术白名单）/ "academic-structured"（CrossRef/arXiv 结构化）
+    # 差距 #4：结构化子域参数契约的落地字段（目前只有 CrossRef/arXiv 落地会填，其余 provider
+    # 为 None，见 docs/检索路由蓝图.md §9.15/§9.16）。不是通用元数据，是"这条结果来自结构化
+    # 数据源"的标志。citation_count 只有 CrossRef 会填（arXiv 不追踪引用，恒为 None）；
+    # venue 对 CrossRef 是期刊名，对 arXiv 借用存放 primary_category（如 "cs.LG"），
+    # 两者语义不同，下游按 provider 字段区分对待，不能直接当同一种"期刊"展示。
+    doi: str | None = None
+    citation_count: int | None = None
+    venue: str | None = None
+    published_year: int | None = None
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)

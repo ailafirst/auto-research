@@ -55,6 +55,18 @@ The primary lens is knowledge transfer and learning: how concepts are taught, wh
 `policy`
 The primary lens is government action and governance: policy goals, regulatory instruments, international agreements, implementation, political economy. Use this when the question is primarily about *what governments do and why*.
 
+`health`
+The primary lens is clinical practice, public health, and medical regulation: disease mechanisms *as they bear on diagnosis/treatment*, drug/device approval, clinical trial outcomes, epidemiology, healthcare policy. Contrast with `science`: a question about the biological mechanism of a virus for its own sake is `science`; a question about a vaccine's clinical efficacy, approval process, or public-health response is `health`.
+
+`code`
+The primary lens is concrete software implementation: how to write, debug, or configure a specific piece of code, which library/API/framework to call and how, error messages and their fixes. Contrast with `technology`: "what deployment architectures exist for X" or "how does Y's underlying algorithm work" is `technology`; "how do I implement/fix/configure X in this language/framework" is `code`.
+
+`environment`
+The primary lens is ecological impact and environmental governance: climate change, pollution, biodiversity, ecosystem impact, environmental regulation and international agreements. Contrast with `policy`: general government-action questions (fiscal policy, industrial policy, social policy) are `policy`; questions specifically about ecological/climate impact or environmental protection measures are `environment`. Contrast with `science`: the physical/chemical mechanism of a pollutant for its own sake is `science`; its ecological impact or regulatory response is `environment`.
+
+`security`
+The primary lens is cybersecurity: vulnerabilities, exploits, attack techniques, defensive controls, incident response, security standards/frameworks. Contrast with `technology`: "how does this system's architecture work" is `technology`; "how is this system attacked and how do you defend it" is `security`.
+
 `general`
 Use only when the question genuinely spans multiple domains with no single dominant lens, or when none of the above applies.
 
@@ -152,6 +164,27 @@ Query: "分布式系统中的数据一致性问题有哪些根本原因，主流
 }
 ```
 
+**Example F** — overall domain vs per-sub-question domain (calibrates Sub-question Rules #5)
+```
+Query: "某新能源汽车公司的技术路线选择和投资风险如何"
+{
+  "question_analysis": {
+    "intent": "deep_investigation",
+    "domain": "business",
+    "depth": "deep",
+    "dimensions": ["technical", "critical", "contextual"],
+    "reasoning": "The user wants an investment-risk read on one company — the primary lens is commercial/competitive, making the overall domain 'business' even though it touches technology."
+  },
+  "sub_questions": [
+    {"id": "q1", "angle": "技术路线", "question": "该公司选择的电池技术路线的工程原理和性能权衡是什么", "domain": "technology"},
+    {"id": "q2", "angle": "市场竞争", "question": "该公司在新能源汽车市场的竞争地位和优劣势如何", "domain": "business"},
+    {"id": "q3", "angle": "监管风险", "question": "该公司面临哪些行业监管和产业政策相关的风险", "domain": "policy"},
+    {"id": "q4", "angle": "财务与投资", "question": "该公司的财务状况和资本市场表现反映出哪些投资风险", "domain": "business"}
+  ]
+}
+```
+The overall `question_analysis.domain` is `business` because the question is fundamentally an investment/competitive read. But q1 asks about battery engineering for its own sake → `technology`; q3 asks about government regulation → `policy`. Each sub-question is tagged independently by what *it* needs, not by inheriting the overall domain. (Fields other than `domain`/`angle`/`question` omitted here for brevity — see Output Format for the full schema.)
+
 ---
 
 ## Phase 2: Research Plan Generation
@@ -172,6 +205,14 @@ Use the Phase 1 analysis to generate sub-questions with the following rules.
 
 **policy**: Policy goals & background · Key instruments & measures · Implementation status · International comparison · Challenges & controversy
 
+**health**: Disease/condition mechanism · Diagnosis & treatment options · Clinical evidence & trial data · Regulatory approval & guidelines · Public health impact
+
+**code**: Core API/syntax usage · Common errors & fixes · Configuration & setup · Alternative approaches/libraries · Best practices & pitfalls
+
+**environment**: Environmental impact & mechanism · Monitoring & assessment data · Regulatory standards & policy instruments · International agreements & comparison · Mitigation & adaptation measures
+
+**security**: Attack vectors & techniques · Vulnerability details & disclosure · Defensive measures & mitigations · Detection & incident response · Standards & frameworks
+
 **general**: Background & definitions · Main directions/types · Current state · Typical cases · Risks & outlook
 
 ### Sub-question Rules
@@ -180,7 +221,9 @@ Use the Phase 1 analysis to generate sub-questions with the following rules.
 2. **`comparison` intent**: assign one sub-question per compared object, plus one synthesis sub-question covering the overall trade-off.
 3. **`how_to` intent**: order sub-questions sequentially: prerequisites → core steps → verification/optimization.
 4. **Priority** (`priority=1` is highest): place the most foundational sub-question first.
-5. **Search queries** requirements:
+5. **Per-sub-question domain**: assign each sub-question its own `domain` (same 11-value enum as `question_analysis.domain`) based on which lens *that specific sub-question* needs — this routes retrieval to the matching vertical source for that sub-question only, independent of the other sub-questions. It is common and expected for sub-question domains to differ from the overall `question_analysis.domain` and from each other: a `business`-lens research plan can still contain one sub-question that asks about the underlying scientific or engineering mechanism, and that sub-question should be tagged `science`/`technology`, not forced to inherit `business`. Do not default every sub-question to the overall domain just because it matches most of the time — check each one independently.
+6. **`domain_secondary`** (optional, omit or `null` in almost all cases): use this **only** when a sub-question genuinely sits on the boundary between two domains and would equally benefit from both domains' vertical sources — not as a hedge for "I'm not fully sure." Two recurring patterns where this applies: (a) an infrastructure/config troubleshooting question phrased at the architecture level (e.g. a Kubernetes/database error message) — tag `domain: technology` (or the closer architectural fit) with `domain_secondary: code` so the retrieval also reaches code-specific sources; (b) an environmental topic described in policy/governance vocabulary (e.g. "international experience in air pollution control", "treaty compliance status") — tag `domain: policy` with `domain_secondary: environment` (or the reverse pairing, whichever is the primary lens) so both the governance angle and the environmental-mechanism angle get vertical coverage. Most sub-questions have one clear domain — leave `domain_secondary` empty for those; do not fill it by default just because two domains are loosely related.
+7. **Search queries** requirements:
    - Mix Chinese and English (keep technical terms in English where they are more precise).
    - Include both broad queries (for background discovery) and specific queries (for detail retrieval).
    - Ensure meaningful semantic diversity within the same sub-question — avoid queries that differ only in phrasing.
@@ -196,7 +239,7 @@ The `research_goal`, `question`, and `angle` fields should be written in the **s
 {
   "question_analysis": {
     "intent": "(one of the 5 intent values)",
-    "domain": "(one of the 7 domain values)",
+    "domain": "(one of the 11 domain values)",
     "depth": "(shallow | medium | deep)",
     "dimensions": ["dimension1", "dimension2"],
     "reasoning": "One sentence explaining the classification decision."
@@ -209,6 +252,8 @@ The `research_goal`, `question`, and `angle` fields should be written in the **s
       "priority": 1,
       "angle": "Angle label (in user's language)",
       "question": "Full sub-question sentence (in user's language)",
+      "domain": "(one of the 11 domain values — this sub-question's own lens, may differ from question_analysis.domain, see Sub-question Rules #5)",
+      "domain_secondary": "(optional, omit or null unless this sub-question genuinely straddles two domains, see Sub-question Rules #6)",
       "search_queries": [
         "Chinese keyword A",
         "Chinese keyword B",

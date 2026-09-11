@@ -127,7 +127,7 @@ class TaskProgressResponse(BaseModel):
     max_rounds: int = 2
     # ── 研究过程中间数据（随节点推进逐步填充）──
     research_strategy: dict[str, Any] = {}          # {intent, domain, depth}
-    sub_questions: list[dict[str, Any]] = []        # [{id, question, search_queries}]
+    sub_questions: list[dict[str, Any]] = []        # [{id, question, search_queries, domain, domain_secondary?}]
     search_queries: list[str] = []
     search_summaries: list[dict[str, Any]] = []     # [{sq_id, answer}] Tavily 摘要
     sources: list[dict[str, Any]] = []              # evaluated_sources 元数据
